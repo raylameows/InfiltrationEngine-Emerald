@@ -1,0 +1,2390 @@
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
+	<External>null</External>
+	<External>nil</External>
+	<Item class="Folder" referent="RBX980BDEFFBB9D47D4A92EC14E3E2266B6">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<string name="Name">EmeraldEditor</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+		</Properties>
+		<Item class="Folder" referent="RBX4D6E582F796D46DBB96FE48CA34FE2EB">
+			<Properties>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+				<bool name="DefinesCapabilities">false</bool>
+				<string name="Name">Editor</string>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			</Properties>
+			<Item class="ModuleScript" referent="RBX29738FB01FA042B2A95E307A51786315">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[local UserInputService = game:GetService("UserInputService")
+
+local Autocomplete = require(`../Language/Autocomplete`)
+local Create = require(`../UI/Create`)
+
+local Suggestions = {}
+Suggestions.__index = Suggestions
+
+type self = {
+	
+}
+type Suggestions = setmetatable<self, typeof(Suggestions)>
+
+local function ModifyString(str: string, insert: string, position: number): string
+	return string.sub(str, 1, position - 1).. insert.. string.sub(str, position)
+end
+
+local function StripPreviousCharacters(str, position, amount)
+	return string.sub(str, 1, position - amount - 1) .. string.sub(str, position)
+end
+
+function Suggestions.new(root: {[any]: any}): Suggestions
+	local self = setmetatable({} :: self, Suggestions)
+	self.Root = root
+	
+	root.Maid:Add(UserInputService.InputBegan:Connect(function(input: InputObject, gpe: boolean)
+		local current = self.Root.State.SelectedSuggestion
+		if current and current.Parent then
+			local cursorPos = self.Root.Interface.Input.CursorPosition
+			local search
+
+			if input.KeyCode == Enum.KeyCode.Down then
+				search = current.LayoutOrder + 1
+			elseif input.KeyCode == Enum.KeyCode.Up then
+				search = current.LayoutOrder - 1
+			elseif input.KeyCode == Enum.KeyCode.Escape then
+				self.Root.Interface.SuggestionFrame.Visible = false
+				self.Root.State.SelectedSuggestion = nil
+				task.wait()
+				self.Root.Interface.Input:CaptureFocus()
+				self.Root.Interface.Input.CursorPosition = self.PreviousCursorPosition
+			elseif input.KeyCode == Enum.KeyCode.Return or input.KeyCode == Enum.KeyCode.Tab then
+				local remove = #self.Root.State.CurrentInput
+				local add = current.Text
+
+				self.Root.Interface.Input.TextEditable = false
+				self.Root.Interface.Input.Text = ModifyString(StripPreviousCharacters(self.Root.Interface.Input.Text, cursorPos, remove), add, cursorPos - remove)
+				task.wait()
+				self.Root.Interface.Input.TextEditable = true
+				self.Root.Interface.Input.CursorPosition = cursorPos - remove + #add
+			end
+
+			if search then
+				local match = self.Root.Interface.SuggestionFrame:QueryDescendants(`>TextButton[LayoutOrder = {search}]`)[1]
+				if match then
+					current.BackgroundTransparency = 1
+					match.BackgroundTransparency = 0
+					self.Root.State.SelectedSuggestion = match
+
+					self.Root.Interface.SuggestionFrame.CanvasPosition += Vector2.new(0, (match.AbsolutePosition.Y + match.AbsoluteSize.Y) - (self.Root.Interface.SuggestionFrame.AbsolutePosition.Y + self.Root.Interface.SuggestionFrame.AbsoluteSize.Y))
+					--if (match.AbsolutePosition.Y + match.AbsoluteSize.Y) > (self.SuggestionFrame.AbsolutePosition.Y + self.SuggestionFrame.AbsoluteSize.Y) then
+					--	repeat task.wait()
+					--		self.SuggestionFrame.CanvasPosition += Vector2.new(0, match.AbsoluteSize.Y / 2)
+					--	until (match.AbsolutePosition.Y + match.AbsoluteSize.Y) <= (self.SuggestionFrame.AbsolutePosition.Y + self.SuggestionFrame.AbsoluteSize.Y)
+					--end
+				end
+			end
+		end
+	end))
+
+	return self
+end
+
+function Suggestions.Update(self: Suggestions)
+	if self.Root.State.SelectedSuggestion and (self.Root.State.CursorKeys[Enum.KeyCode.Up] or self.Root.State.CursorKeys[Enum.KeyCode.Down] or self.Root.State.CursorKeys[Enum.KeyCode.Escape]) then
+		self.Root.Interface.Input.CursorPosition = self.Root.State.PreviousCursorPosition
+		return
+	end
+
+	local tokens = self.Root.State.Tokens
+	local cursorToken = self.Root.Caret:GetToken(self.Root.Interface.Input.CursorPosition)
+
+	local currentToken = tokens[cursorToken]
+	local previousToken = tokens[(cursorToken or 0) - 1]
+	local currentInput = currentToken and currentToken.Token
+	local suggestions = currentInput and Autocomplete:Get(self.Root.Language, currentInput)
+	self.Root.State.CurrentInput = currentInput
+
+	if suggestions and #suggestions ~= 0 and suggestions[1] ~= currentInput and (not previousToken or previousToken.Type == `Newline`) then
+		local pos = self.Root.Caret:GetPosition()
+		local suggestionHeight = self.Root.Interface.SuggestionFrame.AbsoluteSize.Y
+		local offsetY = pos.Y + self.Root.State.LineHeight
+		if offsetY + suggestionHeight > self.Root.Interface.Input.AbsoluteSize.Y then
+			offsetY = pos.Y - suggestionHeight
+		end
+		
+		if self.Root.Interface.SuggestionFrame.Visible == false then
+			self.Root.Interface.SuggestionFrame.CanvasPosition = Vector2.new()
+			self.Root.Interface.SuggestionFrame.Visible = true
+		end
+		
+		self.Root.Interface.SuggestionFrame.Position = UDim2.fromOffset(pos.X, offsetY)
+
+		for index, frame in (self.Root.Interface.SuggestionFrame:QueryDescendants(`>TextButton`)) do
+			if table.find(suggestions, frame.Name) then continue end
+			frame:Destroy()
+		end
+
+		for index, suggestion in (suggestions) do
+			local button = self.Root.Interface.SuggestionFrame:FindFirstChild(suggestion)
+			if not button then
+				button = Create "TextButton" {
+					Name = suggestion,
+					Text = suggestion,
+					TextScaled = true,
+					FontFace = Font.fromEnum(Enum.Font.Code),
+					TextColor3 = Color3.fromRGB(255, 255, 255),
+					BackgroundColor3 = Color3.fromRGB(85, 170, 255),
+					BackgroundTransparency = 1,
+					TextXAlignment = Enum.TextXAlignment.Left,
+					ZIndex = 150,
+
+					Parent = self.Root.Interface.SuggestionFrame
+				}
+			end
+
+			button.LayoutOrder = index
+			if index == 1 then
+				button.BackgroundTransparency = 0
+				self.Root.State.SelectedSuggestion = button
+			else
+				button.BackgroundTransparency = 1
+			end
+		end
+	else
+		self.Root.Interface.SuggestionFrame.Visible = false
+		self.Root.State.SelectedSuggestion = nil
+	end
+end
+
+return Suggestions]]></ProtectedString>
+					<string name="ScriptGuid">{5ff1f804-6574-a658-36bf-8ff98ae8aabe}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">Suggestions</string>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBXD2B7A7C464F74E2BA8D884CCF45B96EB">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[local TextService = game:GetService("TextService")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+
+local Settings = require(`../Shared/Settings`)
+
+local Caret = {}
+Caret.__index = Caret
+
+type self = {
+
+}
+type Caret = setmetatable<self, typeof(Caret)>
+
+local function NumInRange(min: number, num: number, max: number): boolean
+	return num >= min and num <= max
+end
+
+function Caret.new(root: {[any]: any}): Caret
+	local self = setmetatable({} :: self, Caret)
+	self.Root = root
+
+	self.AnimatedCaret = Settings:Get(`AnimatedCaret`)
+	self.AnimatedLineHighlight = Settings:Get(`AnimatedLineHighlight`)
+	self.CaretTweenInfo = TweenInfo.new(Settings:Get(`AnimatedCaretTime`), Enum.EasingStyle.Linear, Enum.EasingDirection.In)
+	self.LineHighlightTweenInfo = TweenInfo.new(Settings:Get(`AnimatedLineHighlightTime`), Enum.EasingStyle.Linear, Enum.EasingDirection.In)
+
+	self.Blinking = Settings:Get(`CaretBlinking`)
+	self.BlinkSpeed = Settings:Get(`CaretBlinkSpeed`)
+	
+	root.Maid:Add(self.Root.Interface.Input:GetPropertyChangedSignal(`CursorPosition`):Connect(function()
+		local keys = {}
+		for _, key in (UserInputService:GetKeysPressed()) do
+			keys[key.KeyCode] = true
+		end
+
+		self.Root.State.CursorKeys = keys
+		self:Update()
+		self.Root.Selection:Update()
+		self.Root.State.PreviousCursorPosition = self.Root.Interface.Input.CursorPosition
+	end))
+	self:Update()
+	
+	if self.Blinking then
+		task.spawn(function()
+			while self.Root.Interface.Caret.Parent do
+				self.Root.Interface.Caret.Visible = not self.Root.Interface.Caret.Visible
+				task.wait(self.BlinkSpeed)
+			end
+		end)
+	end
+	
+	return self
+end
+
+function Caret.Update(self: Caret)
+	if self.Root.Interface.Input.CursorPosition == -1 then
+		self.Root.Interface.Caret.Position = UDim2.fromScale(-1, -1)
+		self.Root.Interface.LineHighlight.Position = UDim2.fromScale(-1, -1)
+	else
+		local pos = self:GetPosition()
+		
+		if not self.AnimatedCaret then
+			self.Root.Interface.Caret.Position = UDim2.fromOffset(pos.X, pos.Y)
+		else
+			TweenService:Create(
+				self.Root.Interface.Caret,
+				self.CaretTweenInfo,
+				{Position = UDim2.fromOffset(pos.X, pos.Y)}
+			):Play()
+		end
+		
+		if not self.AnimatedLineHighlight then
+			self.Root.Interface.LineHighlight.Position = UDim2.fromOffset(0, pos.Y)
+		else
+			TweenService:Create(
+				self.Root.Interface.LineHighlight,
+				self.LineHighlightTweenInfo,
+				{Position = UDim2.fromOffset(0, pos.Y)}
+			):Play()
+		end
+	end
+	
+	if self.Root.Suggestions then
+		self.Root.Suggestions:Update()
+	end
+end
+
+function Caret.GetToken(self: Caret, cursor: number, tokens: {}?): number?
+	for index, token in (tokens or self.Root.State.Tokens) do
+		if NumInRange(token.Start, cursor - 1, token.End) then
+			return index
+		end
+	end
+
+	return nil
+end
+
+function Caret.GetPosition(self: Caret): Vector2
+	local cursor = math.max(self.Root.Interface.Input.CursorPosition, 1)
+	local beforeCursor = string.sub(self.Root.Interface.Input.Text, 1, cursor - 1)
+
+	local lines = string.split(beforeCursor, `\n`)
+	local currentLine = lines[#lines]
+	local lineWidth = TextService:GetTextSize(
+		currentLine,
+		self.Root.Interface.Input.TextSize,
+		self.Root.Interface.Input.Font,
+		Vector2.new(math.huge, math.huge)
+	).X
+
+	local position = Vector2.new(
+		self.Root.State.DefaultAbsolutePosition.X + lineWidth,
+		self.Root.State.DefaultAbsolutePosition.Y + (#lines - 1) * self.Root.State.LineHeight
+	)
+
+	return position
+end
+
+return Caret]]></ProtectedString>
+					<string name="ScriptGuid">{32cdd9e4-767e-092a-ad54-dae88ffcb7e9}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">Caret</string>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX1B168228A2A24128A8AA275219C99F64">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[local CoreGui = game:GetService("CoreGui")
+local HttpService = game:GetService("HttpService")
+local TweenService = game:GetService("TweenService")
+
+local Create = require(`../UI/Create`)
+
+local Settings = require(`../Shared/Settings`)
+local plugin = require(`../Core/Plugin`)()
+
+local Interface = {}
+Interface.__index = Interface
+
+type self = {
+	Screen: ScreenGui | DockWidgetPluginGui,
+	Holder: ScrollingFrame,
+	LinesDisplay: TextLabel,
+	Text: TextLabel,
+	Input: TextBox,
+	Caret: Frame,
+	LineHighlight: Frame,
+	SuggestionFrame: ScrollingFrame
+}
+type Interface = setmetatable<self, typeof(Interface)>
+
+function Interface.new(root: {[any]: any}): Interface
+	local self = setmetatable({} :: self, Interface)
+	self.Root = root
+	
+	local activated = not self.Root.Object:IsA(`BasePart`)
+	--self.Screen = nil
+	--if self.Root.Object:IsA(`BasePart`) then
+	--	--self.Screen = plugin:CreateDockWidgetPluginGuiAsync(`EmeraldEditorDocument`,
+	--	--	DockWidgetPluginGuiInfo.new(
+	--	--		Enum.InitialDockState.Float,
+	--	--		true,
+	--	--		false,
+	--	--		600,
+	--	--		100,
+	--	--		1,
+	--	--		1
+	--	--	)
+	--	--)
+	--	--self.Screen.Title = `{self.Root.Object.Name}`
+	--else
+	--	self.Screen = Create "ScreenGui" {
+	--		Archivable = true,
+	--		Name = `StateScriptEditor`,
+
+	--		Parent = CoreGui
+	--	}
+	--end
+	
+	self.Screen = Create "ScreenGui" {
+		Archivable = true,
+		Name = `StateScriptEditor`,
+
+		Parent = CoreGui
+	}
+	
+	self.Toggle = Create "ImageButton" {
+		AnchorPoint = Vector2.new(1, 1),
+		Size = UDim2.fromOffset(50, 50),
+		Position = UDim2.new(1, -20, 1, -20),
+		BackgroundTransparency = 0,
+		BackgroundColor3 = settings().Studio.Theme:GetColor(Enum.StudioStyleGuideColor.ScriptBackground),
+		ZIndex = 500,
+		Rotation = activated and 0 or 180,
+		
+		Image = `rbxassetid://123669781013911`,
+		
+		Parent = self.Screen,
+		Children = {
+			Stroke = Create "UIStroke" {
+				Color = Color3.new(1, 1, 1),
+				Thickness = 2,
+			}
+		}
+	}
+	
+	self.Holder = Create "ScrollingFrame" {
+		Size = UDim2.fromScale(1, 1),
+		BorderSizePixel = 0,
+
+		ScrollBarImageColor3 = Color3.fromRGB(53, 55, 65),
+		BackgroundColor3 = Color3.fromRGB(39, 41, 48),
+		MidImage = `rbxassetid://132155326`,
+		BottomImage = `rbxassetid://132155326`,
+		TopImage = `rbxassetid://132155326`,
+		CanvasSize = UDim2.new(0, 0, 0, 0),
+		Visible = false,
+
+		Parent = self.Screen,
+		Children = {
+			Ruler = Create "Frame" {
+				Name = `Ruler`,
+				Size = UDim2.new(0, 37, 1, 0),
+				BackgroundColor3 = Color3.fromRGB(38, 41, 47),
+				BorderSizePixel = 0,
+				ZIndex = 25,
+			},
+			Dropper = Create "Frame" {
+				Name = `Dropper`,
+				Size = UDim2.new(0, 18, 1, 0),
+				Position = UDim2.new(0, 37, 0, 0),
+				BackgroundColor3 = Color3.fromRGB(42, 44, 51),
+				BorderSizePixel = 0,
+				ZIndex = 25,
+			},
+			Background = Create "Frame" {
+				Name = `Background`,
+				Size = UDim2.fromScale(1, 1),
+				ZIndex = 20,
+
+				BackgroundColor3 = Settings:Get(`BackgroundColor`)
+			}
+		}
+	}
+	self.LinesDisplay = Create "TextLabel" {
+		Size = UDim2.fromScale(1, 1),
+		ZIndex = 50,
+
+		BackgroundTransparency = 1,
+		TextTransparency = 0,
+
+		TextSize = 17,
+		TextColor3 = Settings:Get(`TextColor`),
+		FontFace = Font.fromEnum(Enum.Font.Code),
+		TextXAlignment = Enum.TextXAlignment.Right,
+		TextYAlignment = Enum.TextYAlignment.Top,
+
+		Parent = self.Holder.Ruler,
+		Children = {
+			Create "UIPadding" {
+				PaddingLeft = UDim.new(0, 8),
+				PaddingRight = UDim.new(0, 8),
+			}
+		}
+	}
+	self.Text = Create "TextLabel" {
+		Size = UDim2.new(1, -55, 1, 0),
+		Position = UDim2.new(0, 55, 0, 0),
+		ZIndex = 50,
+
+		BackgroundTransparency = 1,
+		TextTransparency = 0,
+
+		TextSize = 17,
+		TextColor3 = Settings:Get(`TextColor`),
+		FontFace = Font.fromEnum(Enum.Font.Code),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextYAlignment = Enum.TextYAlignment.Top,
+		RichText = true,
+		AutomaticSize = Enum.AutomaticSize.Y,
+
+		Parent = self.Holder
+	}
+	self.Input = Create "TextBox" {
+		Size = UDim2.new(1, -55, 1, 0),
+		Position = UDim2.new(0, 55, 0, 0),
+		ZIndex = 49,
+
+		BackgroundTransparency = 1,
+		TextTransparency = 0,
+		TextColor3 = Settings:Get(`BackgroundColor`),
+
+		Text = self.Root.Language == `StateScript` and root.Object:GetAttribute(`ScriptSource`) or self.Root.Object:GetAttribute(`CustomBehavior`),
+		TextSize = 17,
+		FontFace = Font.fromEnum(Enum.Font.Code),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextYAlignment = Enum.TextYAlignment.Top,
+		ClearTextOnFocus = false,
+		MultiLine = true,
+		AutomaticSize = Enum.AutomaticSize.Y,
+
+		Parent = self.Holder
+	}
+	self.Caret = Create "Frame" {
+		Size = UDim2.fromOffset(Settings:Get(`CaretWidth`), self.LineHeight),
+		BorderSizePixel = 0,
+		ZIndex = 75,
+
+		Parent = self.Holder,
+	}
+	self.LineHighlight = Create "Frame" {
+		Size = UDim2.new(1, 0, 0, self.LineHeight),
+		BackgroundColor3 = Color3.fromRGB(45, 50, 65),
+		BorderSizePixel = 0,
+		ZIndex = 22,
+
+		Parent = self.Holder,
+	}
+	self.SuggestionFrame = Create "ScrollingFrame" {
+		Size = UDim2.fromOffset(300, 80),
+		BackgroundColor3 = Color3.fromRGB(54, 54, 54),
+		BorderSizePixel = 0,
+		CanvasSize = UDim2.fromScale(0, 0),
+		Visible = false,
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		ZIndex = 100,
+
+		ScrollBarThickness = 5,
+		ScrollBarImageColor3 = Color3.fromRGB(255, 255, 255),
+		MidImage = `rbxassetid://132155326`,
+		BottomImage = `rbxassetid://132155326`,
+		TopImage = `rbxassetid://132155326`,
+
+		Parent = self.Holder,
+		Children = {
+			Layout = Create "UIGridLayout" {
+				CellSize = UDim2.new(1, 0, 0, 15),
+				CellPadding = UDim2.fromScale(0, 0),
+				SortOrder = Enum.SortOrder.LayoutOrder
+			}
+		}
+	}
+
+	self.DefaultAbsolutePosition = self.Input.AbsolutePosition
+	if not activated then
+		self.Holder.Position = UDim2.fromScale(0, 1)
+	end
+	self.Holder.Visible = true
+	
+	local tinfo = TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
+	self.Toggle.MouseButton1Down:Connect(function()
+		if activated then
+			activated = false
+			TweenService:Create(self.Holder, tinfo, {Position = UDim2.fromScale(0, 1)}):Play()
+			TweenService:Create(self.Toggle, tinfo, {Rotation = 180}):Play()
+		else
+			activated = true
+			TweenService:Create(self.Holder, tinfo, {Position = UDim2.fromScale(0, 0)}):Play()
+			TweenService:Create(self.Toggle, tinfo, {Rotation = 0}):Play()
+		end
+	end)
+	
+	self.Input.CursorPosition = -1
+	
+	root.Maid:Add(self.Screen)
+	return self
+end
+
+-- Why is this like 100 times better than the built-in AutomaticCanvasSize???
+function Interface.UpdateCanvas(self: Interface)
+	local totalHeight = self.Input.AbsoluteSize.Y
+	self.Holder.CanvasSize = UDim2.fromOffset(0, totalHeight)
+end
+
+return Interface]]></ProtectedString>
+					<string name="ScriptGuid">{4edd7293-12dd-e339-f622-dc5c363d1582}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">Interface</string>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBXF30DEAA937AC4B098A52EC6754717B1E">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[-- // hi
+
+local Tokenizer = require(`../Language/Tokenizer`)
+local Formatter = require(`../Language/Formatter`)
+
+local Renderer = {}
+Renderer.__index = Renderer
+
+type self = {
+
+}
+type Renderer = setmetatable<self, typeof(Renderer)>
+
+function Renderer.new(root: {[any]: any}): Renderer
+	local self = setmetatable({} :: self, Renderer)
+	self.Root = root
+	
+	root.Maid:Add(self.Root.Interface.Input:GetPropertyChangedSignal(`Text`):Connect(function()
+		self:Render()
+	end))
+	self:Render()
+
+	return self
+end
+
+function Renderer.Render(self: Renderer)
+	self.Root.Interface:UpdateCanvas()
+	
+	local tokens = Tokenizer:FromSource(self.Root.Language, self.Root.Interface.Input.Text)
+	self.Root.State.Tokens = tokens
+	self.Root.Interface.Text.Text = Formatter(self.Root.Language, tokens)
+	self.Root.Interface.LinesDisplay.Text = ``
+	for index, line in (string.split(self.Root.Interface.Input.Text, `\n`)) do
+		self.Root.Interface.LinesDisplay.Text ..= index.. `\n`
+	end
+
+	self.Root.Suggestions:Update()
+end
+
+return Renderer]]></ProtectedString>
+					<string name="ScriptGuid">{5a618d14-9980-961e-d591-e5039f27c5f5}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">Renderer</string>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBXB6623F7BC9204ABC8382F3779D9C2F1A">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[local TextService = game:GetService("TextService")
+
+local State = {}
+State.__index = State
+
+type self = {
+	DefaultAbsolutePosition: number,
+	LineHeight: number,
+	CursorKeys: {[Enum.KeyCode]: boolean},
+	CurrentInput: string,
+	SelectedSuggestion: TextButton,
+	PreviousCursorPosition: number,
+	PreviousSelectionStart: number,
+	Tokens: {unknown},
+}
+type State = setmetatable<self, typeof(State)>
+
+function State.new(root: {[any]: any}): State
+	local self = setmetatable({} :: self, State)
+	self.Root = root
+	
+	self.DefaultAbsolutePosition = self.Root.Interface.DefaultAbsolutePosition
+	self.LineHeight = TextService:GetTextSize(
+		`A`,
+		self.Root.Interface.Input.TextSize,
+		self.Root.Interface.Input.Font,
+		Vector2.new(math.huge, math.huge)
+	).Y
+	self.CursorKeys = {}
+	self.CurrentInput = nil
+	self.SelectedSuggestion = nil
+	self.PreviousCursorPosition = 0
+	self.PreviousSelectionStart = 0
+
+	self.Root.Interface.Caret.Size = UDim2.fromOffset(self.Root.Interface.Caret.Size.X.Offset, self.LineHeight)
+	self.Root.Interface.LineHighlight.Size = UDim2.new(1, 0, 0, self.LineHeight)
+
+	return self
+end
+
+return State]]></ProtectedString>
+					<string name="ScriptGuid">{a90697f0-0371-54dc-80aa-4b7ea4a5459c}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">State</string>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX55104F604E1844AF91D60C68017DD8EC">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[local Selection = {}
+Selection.__index = Selection
+
+type self = {
+	
+}
+type Selection = setmetatable<self, typeof(Selection)>
+
+function Selection.new(root: {[any]: any}): Selection
+	local self = setmetatable({} :: self, Selection)
+	self.Root = root
+
+	return self
+end
+
+-- WHY is this not a feature of TextBoxes
+function Selection.Update(self: Selection)
+	local keys = self.Root.State.CursorKeys
+	if keys[Enum.KeyCode.LeftShift] and (keys[Enum.KeyCode.Up] or keys[Enum.KeyCode.Down]) then
+		--self.Root.Interface.Input.SelectionStart = self.Root.Interface.Input.SelectionStart == -1 and self.Root.State.PreviousCursorPosition or self.Root.State.PreviousSelectionStart
+		self.Root.Interface.Input.SelectionStart = self.Root.State.PreviousSelectionStart == -1 and self.Root.State.PreviousCursorPosition or self.Root.State.PreviousSelectionStart
+	end
+	
+	self.Root.State.PreviousSelectionStart = self.Root.Interface.Input.SelectionStart
+end
+
+return Selection]]></ProtectedString>
+					<string name="ScriptGuid">{72a83aaf-65e1-cd1e-ad68-dea6e7b3e646}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">Selection</string>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX7071E917231240A5935B52D1548A2F36">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[local Writer = {}
+Writer.__index = Writer
+
+type self = {
+	
+}
+type Writer = setmetatable<self, typeof(Writer)>
+
+function Writer.new(root: {[any]: any}): Writer
+	local self = setmetatable({} :: self, Writer)
+	self.Root = root
+	
+	root.Maid:Add(self.Root.Interface.Input:GetPropertyChangedSignal(`Text`):Connect(function()
+		self:Write()
+	end))
+	
+	return self
+end
+
+function Writer:Write()
+	self.Root.Object:SetAttribute(self.Root.Language == `StateScript` and `ScriptSource` or `CustomBehavior`, self.Root.Interface.Input.Text)
+end
+
+return Writer]]></ProtectedString>
+					<string name="ScriptGuid">{4a4a3798-42cc-363b-5046-6cd749c97bf3}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">Writer</string>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+			</Item>
+		</Item>
+		<Item class="Folder" referent="RBXF5C42DAC46FD4CEB886835539D762AE4">
+			<Properties>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+				<bool name="DefinesCapabilities">false</bool>
+				<string name="Name">Language</string>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			</Properties>
+			<Item class="ModuleScript" referent="RBXF1F3B7A04EAB422FAB59D43F86CCE159">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[local Languages = {}
+for _, language in (script.Parent.Languages:GetChildren()) do
+	Languages[language.Name] = require(language)
+end
+
+local Autocomplete = {}
+
+function Autocomplete.Get(self: Autocomplete, language: string, text: string): {[number]: string}
+	text = string.upper(text)
+
+	local commands = Languages[language].Commands
+	local suggestions = {}
+	for command, data in (commands) do
+		local startIndex, endIndex = string.find(command, text, nil, true)
+		if startIndex then
+			suggestions[command] = #command - #text
+		end
+	end
+	
+	local ordered = {}
+	for command, points in (suggestions) do
+		table.insert(ordered, {
+			Command = command,
+			Points = points
+		})
+	end
+	
+	table.sort(ordered, function(a, b)
+		return a.Points < b.Points
+	end)
+	
+	local result = {}
+	for index, data in (ordered) do
+		table.insert(result, data.Command)
+	end
+	
+	return result
+end
+
+type Autocomplete = typeof(Autocomplete)
+return Autocomplete]]></ProtectedString>
+					<string name="ScriptGuid">{db504e27-b89d-9664-59b2-a051e33ab77e}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">Autocomplete</string>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBXC46FA1660CF74A30B1F7EF8678B729F2">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[local Tokenizer = require(`./Tokenizer`)
+local utf8lib = require(`../Util/utf8lib`)
+local Settings = require(`../Shared/Settings`)
+local sub, len = utf8lib.sub, utf8lib.len
+
+local Languages = {}
+for _, language in (script.Parent.Languages:GetChildren()) do
+	Languages[language.Name] = require(language)
+end
+
+local function Style(style: string, text: string): string
+	return style:gsub(`TEXT`, text)
+end
+
+local function Color(color: Color3, text: string): string
+	local style = `<font color="rgb({math.round(color.R * 255)},{math.round(color.G * 255)},{math.round(color.B * 255)})">TEXT</font>`
+	return style:gsub(`TEXT`, text)
+end
+
+return function(language: string, tokens: {})
+	local commands = Languages[language].Commands
+	for index, token in (tokens) do
+		local newToken = token.Token
+
+		local setting = (token.Type == `Command` and commands[token.Token]) and commands[token.Token].Style or (token.Type ~= `Command` and `{token.Type}Color`)
+		local color = Settings:Get(setting)
+		if color then
+			newToken = Color(color, newToken)
+		end
+
+		token.Rich = newToken
+	end
+
+	return Tokenizer:ToSource(tokens)
+end]]></ProtectedString>
+					<string name="ScriptGuid">{35d4a789-beb2-872a-81f8-cc58b36a614f}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">Formatter</string>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX67B920513FA04D24A2EF3F40199D8C10">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[local utf8lib = require(`../Util/utf8lib`)
+local sub, len = utf8lib.sub, utf8lib.len
+
+local Languages = {}
+for _, language in (script.Parent.Languages:GetChildren()) do
+	Languages[language.Name] = require(language)
+end
+
+local Tokenizer = {}
+
+local function ReadUntil(chars: {string}, start: number, terminators: {string}?, includeTerminator: boolean?): (string, number)
+	if not terminators then terminators = {` `, `\n`, "{"} end
+
+	local full = ``
+	local index = start
+	local source = table.concat(chars)
+	while chars[index] do
+		local matched
+		for _, term in terminators do
+			if utf8lib.sub(source, index, index + utf8lib.len(term) - 1) == term then
+				matched = term
+				break
+			end
+		end
+
+		if matched then
+			if includeTerminator then
+				full ..= matched
+				index += utf8lib.len(matched)
+			end
+			return full, index
+		end
+
+		full ..= chars[index]
+		index += 1
+	end
+
+	return full, index
+end
+
+function Tokenizer.FromSource(self: Tokenizer, language: string, source: string): {string}
+	local tokens = {}
+	local data = {}
+	local chars = utf8lib.chars(source)
+	local iter = Languages[language].Rules(chars, ReadUntil)
+	
+	local index = 1
+	local function Push(tokenType: string, token: string)
+		table.insert(tokens, {
+			Type = tokenType,
+			Token = token,
+			Start = index - len(token),
+			End = index - 1
+		})
+	end
+	
+	while chars[index] do
+		local tokenType, token
+		tokenType, token, index = iter(index)
+		Push(tokenType, token)
+	end
+	
+	return tokens, data
+end
+
+function Tokenizer.ToSource(self: Tokenizer, tokens: {string}): string
+	local result = ``
+	for index, token in (tokens) do
+		result ..= token.Rich or token.Token
+	end
+
+	return result
+end
+
+type Tokenizer = typeof(Tokenizer)
+return Tokenizer]]></ProtectedString>
+					<string name="ScriptGuid">{5034635e-06b8-a1c9-1452-e3bed349121a}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">Tokenizer</string>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+			</Item>
+			<Item class="Folder" referent="RBX9988D89681A14BDF97D93F1F0A2F688D">
+				<Properties>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">Languages</string>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+				<Item class="ModuleScript" referent="RBX1F9934A5E09C44CEA986F915B3C1FD93">
+					<Properties>
+						<Content name="LinkedSource"><null></null></Content>
+						<ProtectedString name="Source"><![CDATA[return {
+	Instances = {
+		{
+			{`Property`, `Name`, `DynamicNode`},
+			{`Check`, `IsA`, `BasePart`}
+		},
+		{
+			{`Attribute`, `Type`, `AlarmedBehaviorOverride`},
+			{`Property`, `ClassName`, `BoolValue`}
+		},
+		{
+			{`Attribute`, `Type`, `ConversationResponseCustomBehavior`},
+			{`Property`, `ClassName`, `BoolValue`}
+		},
+		{
+			{`Attribute`, `Type`, `CustomBehaviorCondition`},
+			{`Property`, `ClassName`, `BoolValue`}
+		},
+		{
+			{`Attribute`, `Type`, `CustomBehaviorCondition`},
+			{`Property`, `ClassName`, `BoolValue`}
+		},
+	},
+	Tokens = {
+		`String`,
+		`Expr`,
+		`Command`,
+		`Whitespace`,
+		`Newline`,
+		`Number`,
+		`Base`,
+	},
+	Rules = function(chars: {string}, ReadUntil: ({string}, number, {string}?, boolean?) -> (string, number))
+		return function(index: number)
+			local char = chars[index]
+			local prev = chars[index - 1]
+			local next = chars[index + 1]
+
+			if char == `[` and next == `[` then
+				local full
+				full, index = ReadUntil(chars, index, {`]]`}, true)
+				return `Expr`, full, index
+			elseif char == `[` then
+				local full
+				full, index = ReadUntil(chars, index, {`]`}, true)
+				return `String`, full, index
+			elseif char == `\n` then
+				index += 1
+				return `Newline`, char, index
+			elseif char == ` ` then
+				index += 1
+				return `Whitespace`, char, index
+			elseif tonumber(char) then
+				local full
+				full, index = ReadUntil(chars, index)
+				return `Number`, full, index
+			elseif prev == `\n` or index == 1 then
+				local full
+				full, index = ReadUntil(chars, index)
+				return `Command`, full, index
+			else
+				local full
+				full, index = ReadUntil(chars, index)
+				return `Base`, full, index
+			end
+		end
+	end,
+	Commands = {
+		[`AUTOCLEANUP`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`CHAT`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`CHECKPOINT`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`CROSSARMS`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`END`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`ENTERCOMBAT`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`FOLLOW`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`GOTO`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`HEADTRACKING`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`ONCLEANUP`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`PHONE`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`RADIO`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`MOVETODYNAMIC`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`SETFASTWALK`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`SETRUNNING`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`SET`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`SETFACE`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`TAKEDOWNIMMUNE`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`WAIT`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`WAITFOR`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+	}
+}]]></ProtectedString>
+						<string name="ScriptGuid">{218826ba-d7b6-58af-9d5b-63ed4cb71e2b}</string>
+						<BinaryString name="AttributesSerialize"></BinaryString>
+						<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+						<bool name="DefinesCapabilities">false</bool>
+						<string name="Name">CustomBehavior</string>
+						<int64 name="SourceAssetId">-1</int64>
+						<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX2A1B1F5A0A0C4101B407AB8E8FD71BCD">
+					<Properties>
+						<Content name="LinkedSource"><null></null></Content>
+						<ProtectedString name="Source"><![CDATA[return {
+	Instances = {
+		{
+			{`Attribute`, `Type`, `StateScript`},
+			{`Property`, `ClassName`, `BoolValue`}
+		},
+		{
+			{`Property`, `Name`, `StateScriptPart`},
+			{`Check`, `IsA`, `BasePart`}
+		},
+	},
+	Tokens = {
+		`Preprocessor`,
+		`String`,
+		`Expr`,
+		`Private`,
+		`Command`,
+		`Label`,
+		`Whitespace`,
+		`Newline`,
+		`Number`,
+		`Base`,
+		`Comment`,
+		`ExtensionCommand`
+	},
+	Rules = function(chars: {string}, ReadUntil: ({string}, number, {string}?, boolean?) -> (string, number))
+		return function(index: number)
+			local char = chars[index]
+			local prev = chars[index - 1]
+			local next = chars[index + 1]
+			
+			if char == `*` then
+				index += 1
+				return `Preprocessor`, char, index
+			elseif char == `:` then
+				local full
+				full, index = ReadUntil(chars, index)
+				return `Label`, full, index
+			elseif char == `#` and prev ~= `\n` then
+				local full
+				full, index = ReadUntil(chars, index)
+				return `Private`, full, index
+			elseif char == `[` and next == `[` then
+				local full
+				full, index = ReadUntil(chars, index, {`]]`}, true)
+				return `Expr`, full, index
+			elseif char == `[` then
+				local full
+				full, index = ReadUntil(chars, index, {`]`}, true)
+				return `String`, full, index
+			elseif char == "{" then
+				local full
+				full, index = ReadUntil(chars, index, {`}`}, true)
+				return `Expression`, full, index
+			elseif char == `\n` then
+				index += 1
+				return `Newline`, char, index
+			elseif char == ` ` then
+				index += 1
+				return `Whitespace`, char, index
+			elseif tonumber(char) then
+				local full
+				full, index = ReadUntil(chars, index)
+				return `Number`, full, index
+			elseif (prev == `\n` or index == 1) and char == `;` then
+				local full
+				full, index = ReadUntil(chars, index, {`\n`})
+				return `Comment`, full, index
+			elseif (prev == `\n` or index == 1) and char == `#` then
+				local full
+				full, index = ReadUntil(chars, index)
+				return `ExtensionCommand`, full, index
+			elseif prev == `\n` or prev == `*` or index == 1 then
+				local full
+				full, index = ReadUntil(chars, index)
+				return `Command`, full, index
+			else
+				local full
+				full, index = ReadUntil(chars, index)
+				return `Base`, full, index
+			end
+		end
+	end,
+	Commands = {
+		[`INIT`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`KILL`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`INC`] = {
+			Aliases = {`INCREMENT`},
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`DEC`] = {
+			Aliases = {`DECREMENT`},
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`SET`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`ALLOC`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`ALLOCARRAY`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`GOTO`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`CALL`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`CALLIF`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`RETURN`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`THREAD`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`PUSH`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`POP`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`PEEK`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`WAIT`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`WAITHEARTBEAT`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`WAITFOR`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`WAITFORCHANGE`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`SHUFFLE`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`GUID`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`LERP`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`CFR`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`CFRANGLES`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`CFRDEGREES`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`CFRINV`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`CFRCOPY`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`MOVETO`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`ANIMATE`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`ANIMATECUBIC`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`COPYTO`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`DELETE`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`DELETEALL`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`SPAWNBOT`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`INITSTATECOMP`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`SCRIPTHASH`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+	}
+}]]></ProtectedString>
+						<string name="ScriptGuid">{c3a7b1c9-b829-2f6d-6e71-e19e087c3e94}</string>
+						<BinaryString name="AttributesSerialize"></BinaryString>
+						<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+						<bool name="DefinesCapabilities">false</bool>
+						<string name="Name">StateScript</string>
+						<int64 name="SourceAssetId">-1</int64>
+						<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+					</Properties>
+				</Item>
+			</Item>
+			<Item class="ModuleScript" referent="RBXA6573A90ECC347D89DE051B8E717687C">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[return function(language: string)
+	local module = require(script.Parent.Languages[language])
+	for command, data in (module.Commands) do
+		if data.Aliases then
+			for index, alias in (data.Aliases) do
+				module.Commands[alias] = data
+			end
+		end
+	end
+end]]></ProtectedString>
+					<string name="ScriptGuid">{b0629c8e-2444-3dca-95ec-19fcc82d8df2}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">Initiator</string>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+			</Item>
+		</Item>
+		<Item class="Folder" referent="RBX1CC8965670E94F44BD20D66F29115DD6">
+			<Properties>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+				<bool name="DefinesCapabilities">false</bool>
+				<string name="Name">Core</string>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			</Properties>
+			<Item class="ModuleScript" referent="RBXE2E6FFDE3B3B43C3B9F195893B816BD4">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[local pluginGiven = nil
+
+return function(pluginSource: Plugin?): Plugin?
+	if pluginSource then
+		pluginGiven = pluginSource
+	end
+	
+	return pluginGiven
+end]]></ProtectedString>
+					<string name="ScriptGuid">{0ef1b9ce-710e-d977-bf6a-1afe3521b673}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">Plugin</string>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX05C5580DDDD24840B66C29F0DEC0F9F0">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[local Maid = require(`../Util/Maid`)
+
+local Interface = require(`../Editor/Interface`)
+local Caret = require(`../Editor/Caret`)
+local State = require(`../Editor/State`)
+local Suggestions = require(`../Editor/Suggestions`)
+local Renderer = require(`../Editor/Renderer`)
+local Selection = require(`../Editor/Selection`)
+local Writer = require(`../Editor/Writer`)
+
+local Document = {}
+Document.__index = Document
+
+type self = {
+	Object: Instance,
+	Language: string,
+	Maid: {Maid.Maid}
+}
+type Document = setmetatable<self, typeof(Document)>
+
+function Document.new(object: Instance, language: string, office: {Maid.Maid}): Document
+	local self = setmetatable({} :: self, Document)
+	self.Object = object
+	self.Language = language
+	self.Maid = Maid.new()
+	table.insert(office, self.Maid)
+	
+	self.Interface = Interface.new(self)
+	self.State = State.new(self)
+	self.Caret = Caret.new(self)
+	self.Suggestions = Suggestions.new(self)
+	self.Renderer = Renderer.new(self)
+	self.Selection = Selection.new(self)
+	self.Writer = Writer.new(self)
+
+	return self
+end
+
+-- For future multi-tab support
+--function Document.Open(self: Document)
+
+--end
+
+--function Document.Close(self: Document)
+
+--end
+
+function Document.Destroy(self: Document)
+	self.Maid:Destroy()
+	self = nil
+end
+
+return Document]]></ProtectedString>
+					<string name="ScriptGuid">{4f32951f-b1c0-4522-503d-050a20782b23}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">Document</string>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX6F1EB855760A4250AE61E34F8A2BFF7F">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[local Selection = game:GetService("Selection")
+
+local plugin = require(`./Plugin`)()
+local Document = require(`./Document`)
+local Initiator = require(`../Language/Initiator`)
+
+local Languages = {}
+for _, language in (script.Parent.Parent.Language.Languages:GetChildren()) do
+	Languages[language.Name] = require(language)
+end
+
+local Manager = {}
+Manager.Current = nil :: number
+Manager.Tabs = {} :: {unknown}
+Manager.SelectConnection = nil :: RBXScriptConnection
+Manager.Maids = {}
+
+local function ValidateInstance(instance: Instance, rulesets: {}): boolean
+	for _, ruleset in (rulesets) do
+		local valid = true
+		for _, rule in (ruleset) do
+			local ruleType, key, expected = unpack(rule)
+			if ruleType == `Attribute` then
+				if instance:GetAttribute(key) ~= expected then
+					valid = false
+					break
+				end
+			elseif ruleType == `Property` then
+				if instance[key] ~= expected then
+					valid = false
+					break
+				end
+			elseif ruleType == `Check` then
+				if key == `IsA` then
+					if not instance:IsA(expected) then
+						valid = false
+						break
+					end
+				else
+					valid = false
+					break
+				end
+			else
+				valid = false
+				break
+			end
+		end
+
+		if valid then
+			return true
+		end
+	end
+
+	return false
+end
+
+function Manager.Init(self: Manager)
+	for _, language in (script.Parent.Parent.Language.Languages:GetChildren()) do
+		Initiator(language.Name)
+	end
+	
+	self.SelectConnection = Selection.SelectionChanged:Connect(function()
+		local fullSelection = Selection:Get()
+		local selected = fullSelection[1]
+		if self.Current and self.Current ~= selected then
+			self:DestroyTab(self.Current)
+			self.Current = nil
+		end
+		
+		if not selected or fullSelection[2] then return end
+		
+		local language = self:GetLanguage(selected)
+		if language then
+			local tabId = self:GetTab(selected)
+			if not tabId then
+				tabId = self:CreateTab(selected, language)
+				self.Current = tabId
+			else
+				self:OpenTab(tabId)
+			end
+		end
+	end)
+end
+
+function Manager.GetLanguage(self: Manager, object: Instance)
+	if ValidateInstance(object, Languages.StateScript.Instances) then
+		return `StateScript`
+	elseif ValidateInstance(object, Languages.CustomBehavior.Instances) then
+		return `CustomBehavior`
+	end
+	
+	--if (object:IsA(`BoolValue`) and object:GetAttribute(`Type`) == `StateScript`) or (object:IsA(`BasePart`) and object.Name == `StateScriptPart`) then
+	--	return `StateScript`
+	--elseif (object:IsA(`BoolValue`) and object:GetAttribute(`Type`) == `CustomBehaviorCondition`) then
+	--	return `CustomBehavior`
+	--end
+end
+
+function Manager.CreateTab(self: Manager, object: Instance, language: string)
+	table.insert(self.Tabs, {
+		Object = object,
+		Tab = Document.new(object, language, self.Maids)
+	})
+
+	return #self.Tabs
+end
+
+function Manager.GetTab(self: Manager, object: Instance): number?
+	for index, tab in (self.Tabs) do
+		if tab.Object == object then
+			return index
+		end
+	end
+
+	return false
+end
+
+function Manager.DestroyTab(self: Manager, id: number)
+	self.Tabs[id].Tab:Destroy()
+	table.remove(self.Tabs, id)
+end
+
+function Manager.Clean(self: Manager)
+	for index, maid in (self.Maids) do
+		maid:Destroy()
+	end
+	
+	self.SelectConnection:Disconnect()
+	self.SelectConnection = nil
+end
+
+plugin.Unloading:Connect(function()
+	Manager:Clean()
+end)
+
+export type Manager = typeof(Manager)
+return Manager]]></ProtectedString>
+					<string name="ScriptGuid">{4b8a8382-d109-0056-6fea-2de29f6b2bd3}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">Manager</string>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX780CAD9E5BDF48979A9CB5EE3446A46B">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[local Maid = require(`../Util/Maid`)
+
+local Interface = require(`../Settings/Interface`)
+local Encoder = require(`../Settings/Encoder`)
+local Decoder = require(`../Settings/Decoder`)
+
+local Settings = {}
+Settings.__index = Settings
+
+type self = {
+	Object: Instance,
+	Language: string,
+	Maid: {Maid.Maid}
+}
+type Settings = setmetatable<self, typeof(Settings)>
+
+function Settings.new(): Settings
+	local self = setmetatable({} :: self, Settings)
+	self.Maid = Maid.new()
+
+	self.Encoder = Encoder
+	self.Decoder = Decoder
+	self.Interface = Interface.new(self)
+
+	return self
+end
+
+function Settings.Destroy(self: Settings)
+	self.Maid:Destroy()
+	self = nil
+end
+
+return Settings]]></ProtectedString>
+					<string name="ScriptGuid">{81194033-0ee9-2133-ce5c-7aa1de1530d0}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">Settings</string>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+			</Item>
+		</Item>
+		<Item class="Script" referent="RBXDC757D8E79F34FD5850CFA47B784B7BA">
+			<Properties>
+				<ProtectedString name="Source"><![CDATA[local Toolbar: PluginToolbar = plugin:CreateToolbar(`EmeraldEditor`)
+local Button = Toolbar:CreateButton(`Emerald`, `Allows you to easily edit state-scripts and custom behaviors directly in Studio`, `rbxassetid://134453877661191`)
+local Plugin = require(`./Core/Plugin`)(plugin)
+local Manager = require(`./Core/Manager`)
+local EmeraldSettings = require(`./Core/Settings`).new()
+Manager:Init()
+
+Button.Click:Connect(function()
+	EmeraldSettings.Interface.Widget.Enabled = not EmeraldSettings.Interface.Widget.Enabled
+end)]]></ProtectedString>
+				<bool name="Disabled">false</bool>
+				<Content name="LinkedSource"><null></null></Content>
+				<token name="RunContext">3</token>
+				<string name="ScriptGuid">{1b789976-f94a-6cb5-4d06-a7217b4cf995}</string>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+				<bool name="DefinesCapabilities">false</bool>
+				<string name="Name">Main</string>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			</Properties>
+		</Item>
+		<Item class="Folder" referent="RBX98C1C33048044C659D3EA4240BCDA9C2">
+			<Properties>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+				<bool name="DefinesCapabilities">false</bool>
+				<string name="Name">UI</string>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			</Properties>
+			<Item class="ModuleScript" referent="RBXE733A64B32744D06815526774C33766C">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[export type Class = string
+export type Properties = {[string]: any}
+export type Call = (class: Class) -> ((properties: Properties) -> Instance)
+export type Wrapped<Defaults> = (properties: {[Defaults]: any}) -> Instance
+
+local Create
+Create = function(class: Class)
+	return function(properties: Properties)
+		local object: Instance = Instance.new(class)
+		local parent: Instance?
+		
+		for k, v in (properties) do
+			if k == `Parent` then
+				parent = v
+			elseif k == `Children` then
+				for _, child in (v) do
+					if typeof(child) == `table` then
+						Create (child[1]) (child[2]).Parent = object
+					else
+						child.Parent = object
+					end
+				end
+			else
+				if typeof(v) == `function` then
+					object[k]:Connect(v)
+				else
+					object[k] = v
+				end
+			end
+		end
+		
+		if parent then
+			object.Parent = parent
+		end
+		
+		return object
+	end
+end
+
+return Create]]></ProtectedString>
+					<string name="ScriptGuid">{d5538fd6-a2ba-4788-c88e-bcf66692d8ac}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">Create</string>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX02AB8E5F12434707BD8AD6CD054C0A19">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[local Create = require(`./Create`)
+
+return function(class: Create.Class)
+	return function(properties: Create.Properties)
+		return {class, properties}
+	end
+end]]></ProtectedString>
+					<string name="ScriptGuid">{915aa419-36ce-8ec7-8a30-e426cdd7822e}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">Pseudo</string>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBXF421356142224BA89EEC48A0BAC09D82">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[local Create = require(`./Create`)
+
+return function(class: Create.Class)
+	return function(defaults: Create.Properties)
+		return function(properties: Create.Properties)
+			for k, v in (defaults) do
+				if properties[k] then 
+					if k == `Children` then
+						for _, child in (v) do
+							table.insert(properties.Children, child)
+						end
+					end
+					
+					continue 
+				end
+				properties[k] = v
+			end
+			
+			return Create (class) (properties)
+		end
+	end
+end]]></ProtectedString>
+					<string name="ScriptGuid">{b13470a9-80fc-821e-c0de-3362678da689}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">Wrapper</string>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+			</Item>
+		</Item>
+		<Item class="Folder" referent="RBX9E8D20063B9E4276AAE13EBA2FF2C162">
+			<Properties>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+				<bool name="DefinesCapabilities">false</bool>
+				<string name="Name">Util</string>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			</Properties>
+			<Item class="ModuleScript" referent="RBX7E7A361ADA354E80BC5335EF7CC053C0">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[local Maid = {}
+Maid.__index = Maid
+
+type self = {
+	Jobs: {RBXScriptConnection | Instance}
+}
+export type Maid = setmetatable<self, typeof(Maid)>
+
+function Maid.new(root: {[any]: any}): Maid
+	local self = setmetatable({} :: self, Maid)
+	self.Jobs = {}
+
+	return self
+end
+
+function Maid.Add(self: Maid, object: Instance | RBXScriptConnection)
+	table.insert(self.Jobs, object)
+end
+
+function Maid.Clean(self: Maid)
+	for index, object in (self.Jobs) do
+		local objectType = typeof(object)
+		if objectType == `RBXScriptConnection` then
+			object:Disconnect()
+		elseif objectType == `Instance` then
+			object:Destroy()
+		end
+		
+		object = nil
+	end
+end
+
+function Maid.Destroy(self: Maid)
+	self:Clean()
+	self = nil
+end
+
+return Maid]]></ProtectedString>
+					<string name="ScriptGuid">{7bc19916-d119-03b6-de88-7b9dfedc1473}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">Maid</string>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBXDEDBB7C57CA943A99C3BFD31691CFFDB">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[local utf8lib = {}
+
+function utf8lib.sub(str: string, first: number, last: number?)
+	local len = utf8.len(str)
+	if not len then
+		return ``
+	end
+
+	first = math.max(first, 1)
+	last = last or len
+	last = math.min(last, len)
+
+	if first > last then
+		return ``
+	end
+
+	local startByte = utf8.offset(str, first)
+	local endByte = utf8.offset(str, last + 1)
+	if endByte then
+		return string.sub(str, startByte, endByte - 1)
+	else
+		return string.sub(str, startByte)
+	end
+end
+
+function utf8lib.len(str: string)
+	return utf8.len(str)
+end
+
+function utf8lib.chars(str: string): {string}
+	local chars = {}
+	local i = 1
+	local n = #str
+
+	while i <= n do
+		local start = i
+		i = utf8.offset(str, 2, i) or (n + 1)
+		chars[#chars + 1] = str:sub(start, i - 1)
+	end
+
+	return chars
+end
+
+return utf8lib]]></ProtectedString>
+					<string name="ScriptGuid">{0f307822-6911-c4b4-72df-f0c94489e78e}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">utf8lib</string>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+			</Item>
+		</Item>
+		<Item class="Folder" referent="RBX61654DBAC317428494073D9654CAA731">
+			<Properties>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+				<bool name="DefinesCapabilities">false</bool>
+				<string name="Name">Settings</string>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			</Properties>
+			<Item class="ModuleScript" referent="RBX33B35A69DBFA4E269F30A061DE54B11C">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[local CoreGui = game:GetService("CoreGui")
+
+local Settings = require(`../Shared/Settings`)
+local Create = require(`../UI/Create`)
+local plugin = require(`../Core/Plugin`)()
+
+local Encoder = require(`../Settings/Encoder`)
+local Decoder = require(`../Settings/Decoder`)
+
+local Interface = {}
+Interface.__index = Interface
+
+type self = {
+	Widget: DockWidgetPluginGui,
+	Holder: ScrollingFrame
+}
+type Interface = setmetatable<self, typeof(Interface)>
+
+function Interface.new(root: {[any]: any}): Interface
+	local self = setmetatable({} :: self, Interface)
+	self.Root = root
+	
+	self.Widget = plugin:CreateDockWidgetPluginGuiAsync(`EmeraldSettings`, 
+		DockWidgetPluginGuiInfo.new(
+			Enum.InitialDockState.Float,
+			false,
+			false,
+			500,
+			500,
+			1,
+			1
+		)
+	)
+	self.Widget.Title = `Emerald Settings`
+	
+	self.Holder = Create "ScrollingFrame" {
+		Size = UDim2.fromScale(1, 1),
+		BorderSizePixel = 0,
+
+		ScrollBarImageColor3 = Color3.fromRGB(53, 55, 65),
+		BackgroundColor3 = Color3.fromRGB(39, 41, 48),
+		MidImage = `rbxassetid://132155326`,
+		BottomImage = `rbxassetid://132155326`,
+		TopImage = `rbxassetid://132155326`,
+		CanvasSize = UDim2.new(0, 0, 0, 0),
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+
+		Parent = self.Widget,
+		Children = {
+			Grid = Create "UIListLayout" {
+				Padding = UDim.new(),
+				SortOrder = Enum.SortOrder.LayoutOrder
+			}
+		}
+	}
+	
+	self:Load()
+	return self
+end
+
+function Interface.Load(self: Interface)
+	for _, frame in (self.Holder:QueryDescendants(`>Frame`)) do
+		frame:Destroy()
+	end
+
+	for settingName, setting in (Settings:List()) do
+		self:AddButton(settingName, setting)
+	end
+end
+
+function Interface.AddButton(self: Interface, settingName: string, setting: {Value: any, Default: any, Display: boolean, Index: number})
+	local frame = Create "Frame" {
+		BackgroundTransparency = 1,
+		LayoutOrder = setting.Index,
+		Size = UDim2.new(1, 0, 0, 23),
+		
+		Parent = self.Holder,
+		Children = {
+			Display = Create "TextLabel" {
+				Text = setting.Display,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				Size = UDim2.fromScale(1, 1),
+				FontFace = Font.fromEnum(Enum.Font.Code),
+				TextScaled = true,
+				BackgroundTransparency = 1,
+				TextColor3 = Color3.new(1, 1, 1),
+				
+				Children = {
+					TextSize = Create "UITextSizeConstraint" {
+						MaxTextSize = 20,
+					}
+				}
+			},
+		}
+	}
+	local reset = Create "TextButton" {
+		Text = `R`,
+		TextXAlignment = Enum.TextXAlignment.Center,
+		Size = UDim2.new(0, 30, 1, 0),
+		FontFace = Font.fromEnum(Enum.Font.Code),
+		TextScaled = true,
+		BackgroundTransparency = 1,
+		TextColor3 = Color3.new(1, 1, 1),
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.fromScale(1, 0),
+		
+		Parent = frame,
+		Children = {
+			TextSize = Create "UITextSizeConstraint" {
+				MaxTextSize = 20,
+			}
+		}
+	}
+	
+	local settingType = typeof(setting.Default)
+	local encodedValue = Encoder[settingType](setting.Value)
+	if settingType == `boolean` then
+		local button: TextButton = Create "TextButton" {
+			Text = setting.Value and `Enabled` or `Disabled`,
+			Size = UDim2.new(0.5, 0, 1, 0),
+			AnchorPoint = Vector2.new(1, 0),
+			Position = UDim2.new(1, -reset.Size.X.Offset, 0, 0),
+			TextColor3 = setting.Value and Color3.fromRGB(85, 255, 127) or Color3.fromRGB(255, 108, 108),
+			TextScaled = true,
+			FontFace = Font.fromEnum(Enum.Font.Code),
+			TextXAlignment = Enum.TextXAlignment.Right,
+			BackgroundTransparency = 1,
+			
+			Parent = frame,
+			Children = {
+				TextSize = Create "UITextSizeConstraint" {
+					MaxTextSize = 20,
+				}
+			}
+		}
+		
+		button.MouseButton1Down:Connect(function()
+			local newValue = not setting.Value
+			Settings:Set(settingName, newValue)
+			button.Text = setting.Value and `Enabled` or `Disabled`
+			button.TextColor3 = setting.Value and Color3.fromRGB(85, 255, 127) or Color3.fromRGB(255, 108, 108)
+		end)
+
+		reset.MouseButton1Down:Connect(function()
+			Settings:Set(settingName, setting.Default)
+			button.Text = setting.Value and `Enabled` or `Disabled`
+			button.TextColor3 = setting.Value and Color3.fromRGB(85, 255, 127) or Color3.fromRGB(255, 108, 108)
+		end)
+	else
+		local input: TextBox = Create "TextBox" {
+			Text = encodedValue,
+			Size = UDim2.new(0.5, 0, 1, 0),
+			AnchorPoint = Vector2.new(1, 0),
+			Position = UDim2.new(1, -reset.Size.X.Offset, 0, 0),
+			TextColor3 = settingType == `Color3` and setting.Value or Color3.new(1, 1, 1),
+			TextScaled = true,
+			FontFace = Font.fromEnum(Enum.Font.Code),
+			TextXAlignment = Enum.TextXAlignment.Right,
+			BackgroundTransparency = 1,
+			TextStrokeColor3 = Color3.new(1, 1, 1),
+			TextStrokeTransparency = 1,
+			ClearTextOnFocus = false,
+
+			Parent = frame,
+			Children = {
+				TextSize = Create "UITextSizeConstraint" {
+					MaxTextSize = 20,
+				},
+			}
+		}
+		
+		local function UpdateStroke()
+			if settingType == `Color3` then
+				input.TextColor3 = setting.Value
+				local tolerance = 50 / 255
+				local isDarkColor = setting.Value.R <= tolerance or setting.Value.G <= tolerance or setting.Value.B <= tolerance
+				input.TextStrokeTransparency = isDarkColor and 0.5 or 1
+			end
+		end
+		UpdateStroke()
+		
+		input.FocusLost:Connect(function()
+			local inputValue = input.Text
+			local decodeSuccess, decodeResponse = pcall(function()
+				return Decoder[settingType](inputValue)
+			end)
+			
+			if not decodeSuccess or decodeResponse == nil then
+				warn(decodeResponse or `Decoding returned nil`)
+			else
+				local encodeSuccess, encodeResponse = pcall(function()
+					return Encoder[settingType](decodeResponse)
+				end)
+				
+				if not encodeSuccess or encodeSuccess == nil then
+					warn(encodeResponse or `Encoding returned nil`)
+				else
+					encodedValue = encodeResponse
+					Settings:Set(settingName, decodeResponse)
+				end
+			end
+			
+			input.Text = encodedValue
+			UpdateStroke()
+		end)
+
+		reset.MouseButton1Down:Connect(function()
+			Settings:Set(settingName, setting.Default)
+			encodedValue = Encoder[settingType](setting.Value)
+			input.Text = encodedValue
+			UpdateStroke()
+		end)
+	end
+	
+	return frame
+end
+
+return Interface]]></ProtectedString>
+					<string name="ScriptGuid">{45e46108-1b5a-a3b0-0a78-1126914b2a0d}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">Interface</string>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBXB9F68B9558AF49CDB5D9287116A10581">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[local Encoder = {}
+
+function Encoder.Color3(value: Color3): string
+	return `{math.round(value.R * 255)}, {math.round(value.G * 255)}, {math.round(value.B * 255)}`
+end
+
+function Encoder.number(value: number): string
+	return tostring(value)
+end
+
+function Encoder.boolean(value: boolean): string
+	return value and `true` or `false`
+end
+
+return Encoder]]></ProtectedString>
+					<string name="ScriptGuid">{f0be251c-79c8-c7bd-80d8-5c14b47a4556}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">Encoder</string>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBXC0E0EB429FD943ECB68A1A75BD489101">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[local Decoder = {}
+
+function Decoder.Color3(value: string): Color3
+	return Color3.fromRGB(unpack(value:split(`, `)))
+end
+
+function Decoder.number(value: string): number
+	return tonumber(value)
+end
+
+function Decoder.boolean(value: string): number
+	return value == `true` and true or false
+end
+
+return Decoder]]></ProtectedString>
+					<string name="ScriptGuid">{1e97c139-525c-2422-0601-88568d60ebb9}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">Decoder</string>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+			</Item>
+		</Item>
+		<Item class="Folder" referent="RBXD43779DBBAA54C91B115A9F8863790B0">
+			<Properties>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+				<bool name="DefinesCapabilities">false</bool>
+				<string name="Name">Shared</string>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			</Properties>
+			<Item class="ModuleScript" referent="RBX340A437F7500444E9F170E43BBF6FBEA">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[local plugin = require(`../Core/Plugin`)()
+local Functions = {}
+local function GetIndex(category: number, order: number)
+	return tonumber(`{category}000{order}`)
+end
+local Settings = setmetatable({
+	CaretWidth = {
+		Index = GetIndex(1, 1),
+		Display = `Caret Width`,
+		Default = 1,
+	},
+	CaretBlinking = {
+		Index = GetIndex(1, 2),
+		Display = `Caret Blinking`,
+		Default = true,
+	},
+	CaretBlinkSpeed = {
+		Index = GetIndex(1, 3),
+		Display = `Caret Blink Interval`,
+		Default = 0.5,
+	},
+	AnimatedCaret = {
+		Index = GetIndex(1, 4),
+		Display = `Caret Animation`,
+		Default = false,
+	},
+	AnimatedCaretTime = {
+		Index = GetIndex(1, 5),
+		Display = `Caret Animation Interval`,
+		Default = 0.05,
+	},
+	AnimatedLineHighlight = {
+		Index = GetIndex(1, 6),
+		Display = `Line Highight Animation`,
+		Default = false,
+	},
+	AnimatedLineHighlightTime = {
+		Index = GetIndex(1, 7),
+		Display = `Line Highlight Animation Interval`,
+		Default = 0.05,
+	},
+	
+	CommandColor = {
+		Index = GetIndex(2, 1),
+		Display = `Command Color`,
+		Default = Color3.fromRGB(85, 170, 255),
+	},
+	LabelColor = {
+		Index = GetIndex(2, 2),
+		Display = `Label Color`,
+		Default = Color3.fromRGB(255, 170, 255),
+	},
+	PrivateColor = {
+		Index = GetIndex(2, 3),
+		Display = `Private Color`,
+		Default = Color3.fromRGB(229, 192, 123),
+	},
+	PreprocessorColor = {
+		Index = GetIndex(2, 4),
+		Display = `Preprocessor Color`,
+		Default = Color3.fromRGB(255, 85, 0),
+	},
+	StringColor = {
+		Index = GetIndex(2, 6),
+		Display = `String Color`,
+		Default = Color3.fromRGB(0, 204, 150),
+	},
+	ExprColor = {
+		Index = GetIndex(2, 7),
+		Display = `Expr Color`,
+		Default = Color3.fromRGB(173, 241, 132),
+	},
+	NumberColor = {
+		Index = GetIndex(2, 8),
+		Display = `Number Color`,
+		Default = Color3.fromRGB(255, 198, 0),
+	},
+	BackgroundColor = {
+		Index = GetIndex(2, 9),
+		Display = `Background Color`,
+		Default = Color3.fromRGB(37, 37, 37)
+	},
+	LineHighlightColor = {
+		Index = GetIndex(2, 10),
+		Display = `Line Highlight Color`,
+		Default = Color3.fromRGB(45, 50, 65)
+	},
+	CommentColor = {
+		Index = GetIndex(2, 11),
+		Display = `Comment Color`,
+		Default = Color3.fromRGB(104, 104, 104)
+	},
+	ExtensionCommandColor = {
+		Index = GetIndex(2, 12),
+		Display = `Extension Command Color`,
+		Default = Color3.fromRGB(76, 207, 255)
+	},
+	TextColor = {
+		Index = GetIndex(2, 13),
+		Display = `Text Color`,
+		Default = Color3.fromRGB(204, 204, 204)
+	},
+}, {__index = Functions})
+
+local Encoder = require(`../Settings/Encoder`)
+local Decoder = require(`../Settings/Decoder`)
+
+function Functions:Save()
+	local data = {}
+	for settingName, setting in (self) do
+		if setting.Value ~= setting.Default then
+			data[settingName] = Encoder[typeof(setting.Default)](setting.Value)
+		end
+	end
+
+	plugin:SetSetting(`EmeraldEditorSettings`, data)
+end
+
+function Functions:Load()
+	local LoadedSettings = plugin:GetSetting(`EmeraldEditorSettings`) or {}
+	for settingName, setting in (self) do
+		setting.Value = if LoadedSettings[settingName] ~= nil then Decoder[typeof(setting.Default)](LoadedSettings[settingName]) else setting.Default
+	end
+end
+
+function Functions:Get(setting: string)
+	if not Settings[setting] then return end
+	return if Settings[setting].Value ~= nil then Settings[setting].Value else Settings[setting].Default
+end
+
+function Functions:List()
+	return Settings
+end
+
+function Functions:Set(setting: string, value: any)
+	Settings[setting].Value = value
+	self:Save()
+end
+
+Settings:Load()
+return Settings]]></ProtectedString>
+					<string name="ScriptGuid">{9464d23d-83a2-7eef-b09d-19a99f6d259b}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">Settings</string>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+			</Item>
+		</Item>
+	</Item>
+	<SharedStrings>
+		<SharedString md5="yuZpQdnvvUBOTYh1jqZ2cA=="></SharedString>
+	</SharedStrings>
+</roblox>
