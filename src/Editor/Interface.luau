@@ -150,7 +150,7 @@ function Interface.new(root: {[any]: any}): Interface
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextYAlignment = Enum.TextYAlignment.Top,
 		RichText = true,
-		AutomaticSize = Enum.AutomaticSize.Y,
+		AutomaticSize = Enum.AutomaticSize.XY,
 
 		Parent = self.Holder
 	}
@@ -241,8 +241,13 @@ end
 
 -- Why is this like 100 times better than the built-in AutomaticCanvasSize???
 function Interface.UpdateCanvas(self: Interface)
-	local totalHeight = self.Input.AbsoluteSize.Y
-	self.Holder.CanvasSize = UDim2.fromOffset(0, totalHeight)
+	local totalHeight = self.Input.TextBounds.Y
+	local totalWidth = self.Input.TextBounds.X
+	if totalWidth > 0 then
+		totalWidth += 56
+	end
+	
+	self.Holder.CanvasSize = UDim2.fromOffset(totalWidth, totalHeight)
 end
 
 return Interface
