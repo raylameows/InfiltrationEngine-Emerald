@@ -12,9 +12,13 @@ local function Style(style: string, text: string): string
 	return style:gsub(`TEXT`, text)
 end
 
+local function PlainString(text: string)
+	return (text:gsub("&", "&amp;"):gsub("[%%<>]", {["%"] = "%%%%", ["<"] = "&lt;", [">"] = "&gt;"}))
+end
+
 local function Color(color: Color3, text: string): string
 	local style = `<font color="rgb({math.round(color.R * 255)},{math.round(color.G * 255)},{math.round(color.B * 255)})">TEXT</font>`
-	return style:gsub(`TEXT`, text)
+	return style:gsub(`TEXT`, PlainString(text))
 end
 
 return function(language: string, tokens: {})
