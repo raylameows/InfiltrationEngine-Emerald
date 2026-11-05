@@ -21,7 +21,8 @@ return {
 		`Number`,
 		`Base`,
 		`Comment`,
-		`ExtensionCommand`
+		`ExtensionCommand`,
+		`Expression`
 	},
 	Rules = function(chars: {string}, ReadUntil: ({string}, number, {string}?, boolean?) -> (string, number))
 		return function(index: number)

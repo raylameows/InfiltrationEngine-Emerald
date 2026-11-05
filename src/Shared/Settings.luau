@@ -95,8 +95,13 @@ local Settings = setmetatable({
 		Display = `Extension Command Color`,
 		Default = Color3.fromRGB(76, 207, 255)
 	},
-	TextColor = {
+	ExpressionColor = {
 		Index = GetIndex(2, 13),
+		Display = `Expression Color`,
+		Default = Color3.fromRGB(248, 109, 124)
+	},
+	TextColor = {
+		Index = GetIndex(2, 14),
 		Display = `Text Color`,
 		Default = Color3.fromRGB(204, 204, 204)
 	},
