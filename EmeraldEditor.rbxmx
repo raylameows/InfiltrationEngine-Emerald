@@ -3,23 +3,335 @@
 	<External>nil</External>
 	<Item class="Folder" referent="RBX980BDEFFBB9D47D4A92EC14E3E2266B6">
 		<Properties>
+			<Color3 name="IconTint">
+				<R>0</R>
+				<G>0</G>
+				<B>0</B>
+			</Color3>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 			<bool name="DefinesCapabilities">false</bool>
 			<string name="Name">EmeraldEditor</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
 			<int64 name="SourceAssetId">-1</int64>
 			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 		</Properties>
-		<Item class="Folder" referent="RBX4D6E582F796D46DBB96FE48CA34FE2EB">
+		<Item class="Folder" referent="RBXB4D809CA73C845B8A827DFF69D1B8472">
 			<Properties>
+				<Color3 name="IconTint">
+					<R>0</R>
+					<G>0</G>
+					<B>0</B>
+				</Color3>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+				<bool name="DefinesCapabilities">false</bool>
+				<string name="Name">Core</string>
+				<BinaryString name="SerializedOverrides"></BinaryString>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			</Properties>
+			<Item class="ModuleScript" referent="RBXD90005A2C4554C20BBB1EBFE409A02DA">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[local pluginGiven = nil
+
+return function(pluginSource: Plugin?): Plugin?
+	if pluginSource then
+		pluginGiven = pluginSource
+	end
+	
+	return pluginGiven
+end]]></ProtectedString>
+					<string name="ScriptGuid">{D4F59084-772A-4196-9DCC-FB99C091830E}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">Plugin</string>
+					<BinaryString name="SerializedOverrides"></BinaryString>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBXF7C8F366BF374887ACB5B2CA62D813D8">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[local Maid = require(`../Util/Maid`)
+
+local Interface = require(`../Editor/Interface`)
+local Caret = require(`../Editor/Caret`)
+local State = require(`../Editor/State`)
+local Suggestions = require(`../Editor/Suggestions`)
+local Renderer = require(`../Editor/Renderer`)
+local Selection = require(`../Editor/Selection`)
+local Writer = require(`../Editor/Writer`)
+
+local Document = {}
+Document.__index = Document
+
+type self = {
+	Object: Instance,
+	Language: string,
+	Maid: {Maid.Maid}
+}
+type Document = setmetatable<self, typeof(Document)>
+
+function Document.new(object: Instance, language: string, office: {Maid.Maid}): Document
+	local self = setmetatable({} :: self, Document)
+	self.Object = object
+	self.Language = language
+	self.Maid = Maid.new()
+	table.insert(office, self.Maid)
+	
+	self.Interface = Interface.new(self)
+	self.State = State.new(self)
+	self.Caret = Caret.new(self)
+	self.Suggestions = Suggestions.new(self)
+	self.Renderer = Renderer.new(self)
+	self.Selection = Selection.new(self)
+	self.Writer = Writer.new(self)
+
+	return self
+end
+
+-- For future multi-tab support
+--function Document.Open(self: Document)
+
+--end
+
+--function Document.Close(self: Document)
+
+--end
+
+function Document.Destroy(self: Document)
+	self.Maid:Destroy()
+	self = nil
+end
+
+return Document]]></ProtectedString>
+					<string name="ScriptGuid">{ACC268D5-55D4-4518-A2E5-AB5286AD278E}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">Document</string>
+					<BinaryString name="SerializedOverrides"></BinaryString>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBXBA99B577EE13493CAA606D47BEEC05A2">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[local Selection = game:GetService("Selection")
+
+local plugin = require(`./Plugin`)()
+local Document = require(`./Document`)
+local Initiator = require(`../Language/Initiator`)
+
+local Languages = {}
+for _, language in (script.Parent.Parent.Language.Languages:GetChildren()) do
+	Languages[language.Name] = require(language)
+end
+
+local Manager = {}
+Manager.Current = nil :: number
+Manager.Tabs = {} :: {unknown}
+Manager.SelectConnection = nil :: RBXScriptConnection
+Manager.Maids = {}
+
+local function ValidateInstance(instance: Instance, rulesets: {}): boolean
+	for _, ruleset in (rulesets) do
+		local valid = true
+		for _, rule in (ruleset) do
+			local ruleType, key, expected = unpack(rule)
+			if ruleType == `Attribute` then
+				if instance:GetAttribute(key) ~= expected then
+					valid = false
+					break
+				end
+			elseif ruleType == `Property` then
+				if instance[key] ~= expected then
+					valid = false
+					break
+				end
+			elseif ruleType == `Check` then
+				if key == `IsA` then
+					if not instance:IsA(expected) then
+						valid = false
+						break
+					end
+				else
+					valid = false
+					break
+				end
+			else
+				valid = false
+				break
+			end
+		end
+
+		if valid then
+			return true
+		end
+	end
+
+	return false
+end
+
+function Manager.Init(self: Manager)
+	for _, language in (script.Parent.Parent.Language.Languages:GetChildren()) do
+		Initiator(language.Name)
+	end
+	
+	self.SelectConnection = Selection.SelectionChanged:Connect(function()
+		local fullSelection = Selection:Get()
+		local selected = fullSelection[1]
+		if self.Current and self.Current ~= selected then
+			self:DestroyTab(self.Current)
+			self.Current = nil
+		end
+		
+		if not selected or fullSelection[2] then return end
+		
+		local language = self:GetLanguage(selected)
+		if language then
+			local tabId = self:GetTab(selected)
+			if not tabId then
+				tabId = self:CreateTab(selected, language)
+				self.Current = tabId
+			else
+				self:OpenTab(tabId)
+			end
+		end
+	end)
+end
+
+function Manager.GetLanguage(self: Manager, object: Instance)
+	if ValidateInstance(object, Languages.StateScript.Instances) then
+		return `StateScript`
+	elseif ValidateInstance(object, Languages.CustomBehavior.Instances) then
+		return `CustomBehavior`
+	end
+	
+	--if (object:IsA(`BoolValue`) and object:GetAttribute(`Type`) == `StateScript`) or (object:IsA(`BasePart`) and object.Name == `StateScriptPart`) then
+	--	return `StateScript`
+	--elseif (object:IsA(`BoolValue`) and object:GetAttribute(`Type`) == `CustomBehaviorCondition`) then
+	--	return `CustomBehavior`
+	--end
+end
+
+function Manager.CreateTab(self: Manager, object: Instance, language: string)
+	table.insert(self.Tabs, {
+		Object = object,
+		Tab = Document.new(object, language, self.Maids)
+	})
+
+	return #self.Tabs
+end
+
+function Manager.GetTab(self: Manager, object: Instance): number?
+	for index, tab in (self.Tabs) do
+		if tab.Object == object then
+			return index
+		end
+	end
+
+	return false
+end
+
+function Manager.DestroyTab(self: Manager, id: number)
+	self.Tabs[id].Tab:Destroy()
+	table.remove(self.Tabs, id)
+end
+
+function Manager.Clean(self: Manager)
+	for index, maid in (self.Maids) do
+		maid:Destroy()
+	end
+	
+	self.SelectConnection:Disconnect()
+	self.SelectConnection = nil
+end
+
+plugin.Unloading:Connect(function()
+	Manager:Clean()
+end)
+
+export type Manager = typeof(Manager)
+return Manager]]></ProtectedString>
+					<string name="ScriptGuid">{F6A8FE52-5058-494D-91C2-44A23F06D2C3}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">Manager</string>
+					<BinaryString name="SerializedOverrides"></BinaryString>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBXF95DAD59D01949CAAA01DCF9FEAB5AE4">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[local Maid = require(`../Util/Maid`)
+
+local Interface = require(`../Settings/Interface`)
+local Encoder = require(`../Settings/Encoder`)
+local Decoder = require(`../Settings/Decoder`)
+
+local Settings = {}
+Settings.__index = Settings
+
+type self = {
+	Object: Instance,
+	Language: string,
+	Maid: {Maid.Maid}
+}
+type Settings = setmetatable<self, typeof(Settings)>
+
+function Settings.new(): Settings
+	local self = setmetatable({} :: self, Settings)
+	self.Maid = Maid.new()
+
+	self.Encoder = Encoder
+	self.Decoder = Decoder
+	self.Interface = Interface.new(self)
+
+	return self
+end
+
+function Settings.Destroy(self: Settings)
+	self.Maid:Destroy()
+	self = nil
+end
+
+return Settings]]></ProtectedString>
+					<string name="ScriptGuid">{4511F4CF-27BB-474C-88A3-B6B5F31EFCA2}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">Settings</string>
+					<BinaryString name="SerializedOverrides"></BinaryString>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+			</Item>
+		</Item>
+		<Item class="Folder" referent="RBX5461C4D473104331B4EFEF079E84C5E3">
+			<Properties>
+				<Color3 name="IconTint">
+					<R>0</R>
+					<G>0</G>
+					<B>0</B>
+				</Color3>
 				<BinaryString name="AttributesSerialize"></BinaryString>
 				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 				<bool name="DefinesCapabilities">false</bool>
 				<string name="Name">Editor</string>
+				<BinaryString name="SerializedOverrides"></BinaryString>
 				<int64 name="SourceAssetId">-1</int64>
 				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 			</Properties>
-			<Item class="ModuleScript" referent="RBX29738FB01FA042B2A95E307A51786315">
+			<Item class="ModuleScript" referent="RBX1E21FA890C304D5DACDF6E00F1A60BCE">
 				<Properties>
 					<Content name="LinkedSource"><null></null></Content>
 					<ProtectedString name="Source"><![CDATA[local UserInputService = game:GetService("UserInputService")
@@ -163,16 +475,17 @@ function Suggestions.Update(self: Suggestions)
 end
 
 return Suggestions]]></ProtectedString>
-					<string name="ScriptGuid">{5ff1f804-6574-a658-36bf-8ff98ae8aabe}</string>
+					<string name="ScriptGuid">{0FBAC4F5-0B82-45E2-AE6F-2ABAB87832A9}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
 					<string name="Name">Suggestions</string>
+					<BinaryString name="SerializedOverrides"></BinaryString>
 					<int64 name="SourceAssetId">-1</int64>
 					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBXD2B7A7C464F74E2BA8D884CCF45B96EB">
+			<Item class="ModuleScript" referent="RBX961128639E1B495D9C3CFB6963C1C437">
 				<Properties>
 					<Content name="LinkedSource"><null></null></Content>
 					<ProtectedString name="Source"><![CDATA[local TextService = game:GetService("TextService")
@@ -295,16 +608,17 @@ function Caret.GetPosition(self: Caret): Vector2
 end
 
 return Caret]]></ProtectedString>
-					<string name="ScriptGuid">{32cdd9e4-767e-092a-ad54-dae88ffcb7e9}</string>
+					<string name="ScriptGuid">{4A9ECF61-A0C0-4268-A534-EE49B65E9195}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
 					<string name="Name">Caret</string>
+					<BinaryString name="SerializedOverrides"></BinaryString>
 					<int64 name="SourceAssetId">-1</int64>
 					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX1B168228A2A24128A8AA275219C99F64">
+			<Item class="ModuleScript" referent="RBX4B1441A18B2A4FDEA126092ACCFB6DBC">
 				<Properties>
 					<Content name="LinkedSource"><null></null></Content>
 					<ProtectedString name="Source"><![CDATA[local CoreGui = game:GetService("CoreGui")
@@ -459,7 +773,7 @@ function Interface.new(root: {[any]: any}): Interface
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextYAlignment = Enum.TextYAlignment.Top,
 		RichText = true,
-		AutomaticSize = Enum.AutomaticSize.Y,
+		AutomaticSize = Enum.AutomaticSize.XY,
 
 		Parent = self.Holder
 	}
@@ -550,21 +864,27 @@ end
 
 -- Why is this like 100 times better than the built-in AutomaticCanvasSize???
 function Interface.UpdateCanvas(self: Interface)
-	local totalHeight = self.Input.AbsoluteSize.Y
-	self.Holder.CanvasSize = UDim2.fromOffset(0, totalHeight)
+	local totalHeight = self.Input.TextBounds.Y
+	local totalWidth = self.Input.TextBounds.X
+	if totalWidth > 0 then
+		totalWidth += 56
+	end
+	
+	self.Holder.CanvasSize = UDim2.fromOffset(totalWidth, totalHeight)
 end
 
 return Interface]]></ProtectedString>
-					<string name="ScriptGuid">{4edd7293-12dd-e339-f622-dc5c363d1582}</string>
+					<string name="ScriptGuid">{B67C2FF2-1DB4-40D4-ACA3-B64941A9978D}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
 					<string name="Name">Interface</string>
+					<BinaryString name="SerializedOverrides"></BinaryString>
 					<int64 name="SourceAssetId">-1</int64>
 					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBXF30DEAA937AC4B098A52EC6754717B1E">
+			<Item class="ModuleScript" referent="RBXE1EAC74966624A0AB5A28F52D521A3EC">
 				<Properties>
 					<Content name="LinkedSource"><null></null></Content>
 					<ProtectedString name="Source"><![CDATA[-- // hi
@@ -607,16 +927,17 @@ function Renderer.Render(self: Renderer)
 end
 
 return Renderer]]></ProtectedString>
-					<string name="ScriptGuid">{5a618d14-9980-961e-d591-e5039f27c5f5}</string>
+					<string name="ScriptGuid">{599E2A44-BB2A-489D-9F18-21C010328DAF}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
 					<string name="Name">Renderer</string>
+					<BinaryString name="SerializedOverrides"></BinaryString>
 					<int64 name="SourceAssetId">-1</int64>
 					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBXB6623F7BC9204ABC8382F3779D9C2F1A">
+			<Item class="ModuleScript" referent="RBXF4E5A17247D2499F867B9C8F66BDFB34">
 				<Properties>
 					<Content name="LinkedSource"><null></null></Content>
 					<ProtectedString name="Source"><![CDATA[local TextService = game:GetService("TextService")
@@ -660,16 +981,17 @@ function State.new(root: {[any]: any}): State
 end
 
 return State]]></ProtectedString>
-					<string name="ScriptGuid">{a90697f0-0371-54dc-80aa-4b7ea4a5459c}</string>
+					<string name="ScriptGuid">{A9E4B869-FA52-40BB-96C7-65ABC9537C16}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
 					<string name="Name">State</string>
+					<BinaryString name="SerializedOverrides"></BinaryString>
 					<int64 name="SourceAssetId">-1</int64>
 					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX55104F604E1844AF91D60C68017DD8EC">
+			<Item class="ModuleScript" referent="RBX0157769D10D14C4FA95C8EA1DEEEFC09">
 				<Properties>
 					<Content name="LinkedSource"><null></null></Content>
 					<ProtectedString name="Source"><![CDATA[local Selection = {}
@@ -699,16 +1021,17 @@ function Selection.Update(self: Selection)
 end
 
 return Selection]]></ProtectedString>
-					<string name="ScriptGuid">{72a83aaf-65e1-cd1e-ad68-dea6e7b3e646}</string>
+					<string name="ScriptGuid">{AD794B35-4CD4-485B-A01F-79D510428E9A}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
 					<string name="Name">Selection</string>
+					<BinaryString name="SerializedOverrides"></BinaryString>
 					<int64 name="SourceAssetId">-1</int64>
 					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX7071E917231240A5935B52D1548A2F36">
+			<Item class="ModuleScript" referent="RBXAD30CBE80AEB4BBDBC1D7BCF2961488D">
 				<Properties>
 					<Content name="LinkedSource"><null></null></Content>
 					<ProtectedString name="Source"><![CDATA[local Writer = {}
@@ -735,26 +1058,33 @@ function Writer:Write()
 end
 
 return Writer]]></ProtectedString>
-					<string name="ScriptGuid">{4a4a3798-42cc-363b-5046-6cd749c97bf3}</string>
+					<string name="ScriptGuid">{A5A985AC-EB4E-421F-8225-1A4EC6EB860A}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
 					<string name="Name">Writer</string>
+					<BinaryString name="SerializedOverrides"></BinaryString>
 					<int64 name="SourceAssetId">-1</int64>
 					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 				</Properties>
 			</Item>
 		</Item>
-		<Item class="Folder" referent="RBXF5C42DAC46FD4CEB886835539D762AE4">
+		<Item class="Folder" referent="RBX9DDC562395DE462B8CCF5E27DB220657">
 			<Properties>
+				<Color3 name="IconTint">
+					<R>0</R>
+					<G>0</G>
+					<B>0</B>
+				</Color3>
 				<BinaryString name="AttributesSerialize"></BinaryString>
 				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 				<bool name="DefinesCapabilities">false</bool>
 				<string name="Name">Language</string>
+				<BinaryString name="SerializedOverrides"></BinaryString>
 				<int64 name="SourceAssetId">-1</int64>
 				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 			</Properties>
-			<Item class="ModuleScript" referent="RBXF1F3B7A04EAB422FAB59D43F86CCE159">
+			<Item class="ModuleScript" referent="RBX3D843D0D48EA4F859055112474587A83">
 				<Properties>
 					<Content name="LinkedSource"><null></null></Content>
 					<ProtectedString name="Source"><![CDATA[local Languages = {}
@@ -798,16 +1128,17 @@ end
 
 type Autocomplete = typeof(Autocomplete)
 return Autocomplete]]></ProtectedString>
-					<string name="ScriptGuid">{db504e27-b89d-9664-59b2-a051e33ab77e}</string>
+					<string name="ScriptGuid">{7A2BB5C9-7136-46E8-83BC-27305D002448}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
 					<string name="Name">Autocomplete</string>
+					<BinaryString name="SerializedOverrides"></BinaryString>
 					<int64 name="SourceAssetId">-1</int64>
 					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBXC46FA1660CF74A30B1F7EF8678B729F2">
+			<Item class="ModuleScript" referent="RBX04F0B92DC9DF4769B1F6030D107E4554">
 				<Properties>
 					<Content name="LinkedSource"><null></null></Content>
 					<ProtectedString name="Source"><![CDATA[local Tokenizer = require(`./Tokenizer`)
@@ -824,9 +1155,13 @@ local function Style(style: string, text: string): string
 	return style:gsub(`TEXT`, text)
 end
 
+local function PlainString(text: string)
+	return (text:gsub("&", "&amp;"):gsub("[%%<>]", {["%"] = "%%%%", ["<"] = "&lt;", [">"] = "&gt;"}))
+end
+
 local function Color(color: Color3, text: string): string
 	local style = `<font color="rgb({math.round(color.R * 255)},{math.round(color.G * 255)},{math.round(color.B * 255)})">TEXT</font>`
-	return style:gsub(`TEXT`, text)
+	return style:gsub(`TEXT`, PlainString(text))
 end
 
 return function(language: string, tokens: {})
@@ -845,16 +1180,17 @@ return function(language: string, tokens: {})
 
 	return Tokenizer:ToSource(tokens)
 end]]></ProtectedString>
-					<string name="ScriptGuid">{35d4a789-beb2-872a-81f8-cc58b36a614f}</string>
+					<string name="ScriptGuid">{881265B9-A731-48C9-B0AA-EF145F50B482}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
 					<string name="Name">Formatter</string>
+					<BinaryString name="SerializedOverrides"></BinaryString>
 					<int64 name="SourceAssetId">-1</int64>
 					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX67B920513FA04D24A2EF3F40199D8C10">
+			<Item class="ModuleScript" referent="RBX2DFD3314433040E5BDAC3CE7919263BD">
 				<Properties>
 					<Content name="LinkedSource"><null></null></Content>
 					<ProtectedString name="Source"><![CDATA[local utf8lib = require(`../Util/utf8lib`)
@@ -933,25 +1269,32 @@ end
 
 type Tokenizer = typeof(Tokenizer)
 return Tokenizer]]></ProtectedString>
-					<string name="ScriptGuid">{5034635e-06b8-a1c9-1452-e3bed349121a}</string>
+					<string name="ScriptGuid">{FD3AF074-8947-4AA6-A107-3F478A6D7933}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
 					<string name="Name">Tokenizer</string>
+					<BinaryString name="SerializedOverrides"></BinaryString>
 					<int64 name="SourceAssetId">-1</int64>
 					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 				</Properties>
 			</Item>
-			<Item class="Folder" referent="RBX9988D89681A14BDF97D93F1F0A2F688D">
+			<Item class="Folder" referent="RBX879976CD9F9147569F64C7DB71020A02">
 				<Properties>
+					<Color3 name="IconTint">
+						<R>0</R>
+						<G>0</G>
+						<B>0</B>
+					</Color3>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
 					<string name="Name">Languages</string>
+					<BinaryString name="SerializedOverrides"></BinaryString>
 					<int64 name="SourceAssetId">-1</int64>
 					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 				</Properties>
-				<Item class="ModuleScript" referent="RBX1F9934A5E09C44CEA986F915B3C1FD93">
+				<Item class="ModuleScript" referent="RBX8B45F4B251B64CA1956C7D7D35D8570B">
 					<Properties>
 						<Content name="LinkedSource"><null></null></Content>
 						<ProtectedString name="Source"><![CDATA[return {
@@ -1104,16 +1447,17 @@ return Tokenizer]]></ProtectedString>
 		},
 	}
 }]]></ProtectedString>
-						<string name="ScriptGuid">{218826ba-d7b6-58af-9d5b-63ed4cb71e2b}</string>
+						<string name="ScriptGuid">{154FEDB1-5222-4CCE-8892-5BDF21F9D5C5}</string>
 						<BinaryString name="AttributesSerialize"></BinaryString>
 						<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 						<bool name="DefinesCapabilities">false</bool>
 						<string name="Name">CustomBehavior</string>
+						<BinaryString name="SerializedOverrides"></BinaryString>
 						<int64 name="SourceAssetId">-1</int64>
 						<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX2A1B1F5A0A0C4101B407AB8E8FD71BCD">
+				<Item class="ModuleScript" referent="RBXCD14FDBDE7814FF38985847BE21EF063">
 					<Properties>
 						<Content name="LinkedSource"><null></null></Content>
 						<ProtectedString name="Source"><![CDATA[return {
@@ -1139,7 +1483,8 @@ return Tokenizer]]></ProtectedString>
 		`Number`,
 		`Base`,
 		`Comment`,
-		`ExtensionCommand`
+		`ExtensionCommand`,
+		`Expression`
 	},
 	Rules = function(chars: {string}, ReadUntil: ({string}, number, {string}?, boolean?) -> (string, number))
 		return function(index: number)
@@ -1348,17 +1693,18 @@ return Tokenizer]]></ProtectedString>
 		},
 	}
 }]]></ProtectedString>
-						<string name="ScriptGuid">{c3a7b1c9-b829-2f6d-6e71-e19e087c3e94}</string>
+						<string name="ScriptGuid">{6EFD6A74-CB80-4DF8-AC18-D856BD4FA71E}</string>
 						<BinaryString name="AttributesSerialize"></BinaryString>
 						<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 						<bool name="DefinesCapabilities">false</bool>
 						<string name="Name">StateScript</string>
+						<BinaryString name="SerializedOverrides"></BinaryString>
 						<int64 name="SourceAssetId">-1</int64>
 						<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 					</Properties>
 				</Item>
 			</Item>
-			<Item class="ModuleScript" referent="RBXA6573A90ECC347D89DE051B8E717687C">
+			<Item class="ModuleScript" referent="RBXB08EA6244C3E44B0ADB931B159DF6459">
 				<Properties>
 					<Content name="LinkedSource"><null></null></Content>
 					<ProtectedString name="Source"><![CDATA[return function(language: string)
@@ -1371,571 +1717,33 @@ return Tokenizer]]></ProtectedString>
 		end
 	end
 end]]></ProtectedString>
-					<string name="ScriptGuid">{b0629c8e-2444-3dca-95ec-19fcc82d8df2}</string>
+					<string name="ScriptGuid">{7E1F9F97-346E-4377-81BF-DD2D00CB0E71}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
 					<string name="Name">Initiator</string>
+					<BinaryString name="SerializedOverrides"></BinaryString>
 					<int64 name="SourceAssetId">-1</int64>
 					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 				</Properties>
 			</Item>
 		</Item>
-		<Item class="Folder" referent="RBX1CC8965670E94F44BD20D66F29115DD6">
+		<Item class="Folder" referent="RBX3AF1FE4CD2164F84AC71B4ACA5CBD5E6">
 			<Properties>
-				<BinaryString name="AttributesSerialize"></BinaryString>
-				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
-				<bool name="DefinesCapabilities">false</bool>
-				<string name="Name">Core</string>
-				<int64 name="SourceAssetId">-1</int64>
-				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
-			</Properties>
-			<Item class="ModuleScript" referent="RBXE2E6FFDE3B3B43C3B9F195893B816BD4">
-				<Properties>
-					<Content name="LinkedSource"><null></null></Content>
-					<ProtectedString name="Source"><![CDATA[local pluginGiven = nil
-
-return function(pluginSource: Plugin?): Plugin?
-	if pluginSource then
-		pluginGiven = pluginSource
-	end
-	
-	return pluginGiven
-end]]></ProtectedString>
-					<string name="ScriptGuid">{0ef1b9ce-710e-d977-bf6a-1afe3521b673}</string>
-					<BinaryString name="AttributesSerialize"></BinaryString>
-					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
-					<bool name="DefinesCapabilities">false</bool>
-					<string name="Name">Plugin</string>
-					<int64 name="SourceAssetId">-1</int64>
-					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
-				</Properties>
-			</Item>
-			<Item class="ModuleScript" referent="RBX05C5580DDDD24840B66C29F0DEC0F9F0">
-				<Properties>
-					<Content name="LinkedSource"><null></null></Content>
-					<ProtectedString name="Source"><![CDATA[local Maid = require(`../Util/Maid`)
-
-local Interface = require(`../Editor/Interface`)
-local Caret = require(`../Editor/Caret`)
-local State = require(`../Editor/State`)
-local Suggestions = require(`../Editor/Suggestions`)
-local Renderer = require(`../Editor/Renderer`)
-local Selection = require(`../Editor/Selection`)
-local Writer = require(`../Editor/Writer`)
-
-local Document = {}
-Document.__index = Document
-
-type self = {
-	Object: Instance,
-	Language: string,
-	Maid: {Maid.Maid}
-}
-type Document = setmetatable<self, typeof(Document)>
-
-function Document.new(object: Instance, language: string, office: {Maid.Maid}): Document
-	local self = setmetatable({} :: self, Document)
-	self.Object = object
-	self.Language = language
-	self.Maid = Maid.new()
-	table.insert(office, self.Maid)
-	
-	self.Interface = Interface.new(self)
-	self.State = State.new(self)
-	self.Caret = Caret.new(self)
-	self.Suggestions = Suggestions.new(self)
-	self.Renderer = Renderer.new(self)
-	self.Selection = Selection.new(self)
-	self.Writer = Writer.new(self)
-
-	return self
-end
-
--- For future multi-tab support
---function Document.Open(self: Document)
-
---end
-
---function Document.Close(self: Document)
-
---end
-
-function Document.Destroy(self: Document)
-	self.Maid:Destroy()
-	self = nil
-end
-
-return Document]]></ProtectedString>
-					<string name="ScriptGuid">{4f32951f-b1c0-4522-503d-050a20782b23}</string>
-					<BinaryString name="AttributesSerialize"></BinaryString>
-					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
-					<bool name="DefinesCapabilities">false</bool>
-					<string name="Name">Document</string>
-					<int64 name="SourceAssetId">-1</int64>
-					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
-				</Properties>
-			</Item>
-			<Item class="ModuleScript" referent="RBX6F1EB855760A4250AE61E34F8A2BFF7F">
-				<Properties>
-					<Content name="LinkedSource"><null></null></Content>
-					<ProtectedString name="Source"><![CDATA[local Selection = game:GetService("Selection")
-
-local plugin = require(`./Plugin`)()
-local Document = require(`./Document`)
-local Initiator = require(`../Language/Initiator`)
-
-local Languages = {}
-for _, language in (script.Parent.Parent.Language.Languages:GetChildren()) do
-	Languages[language.Name] = require(language)
-end
-
-local Manager = {}
-Manager.Current = nil :: number
-Manager.Tabs = {} :: {unknown}
-Manager.SelectConnection = nil :: RBXScriptConnection
-Manager.Maids = {}
-
-local function ValidateInstance(instance: Instance, rulesets: {}): boolean
-	for _, ruleset in (rulesets) do
-		local valid = true
-		for _, rule in (ruleset) do
-			local ruleType, key, expected = unpack(rule)
-			if ruleType == `Attribute` then
-				if instance:GetAttribute(key) ~= expected then
-					valid = false
-					break
-				end
-			elseif ruleType == `Property` then
-				if instance[key] ~= expected then
-					valid = false
-					break
-				end
-			elseif ruleType == `Check` then
-				if key == `IsA` then
-					if not instance:IsA(expected) then
-						valid = false
-						break
-					end
-				else
-					valid = false
-					break
-				end
-			else
-				valid = false
-				break
-			end
-		end
-
-		if valid then
-			return true
-		end
-	end
-
-	return false
-end
-
-function Manager.Init(self: Manager)
-	for _, language in (script.Parent.Parent.Language.Languages:GetChildren()) do
-		Initiator(language.Name)
-	end
-	
-	self.SelectConnection = Selection.SelectionChanged:Connect(function()
-		local fullSelection = Selection:Get()
-		local selected = fullSelection[1]
-		if self.Current and self.Current ~= selected then
-			self:DestroyTab(self.Current)
-			self.Current = nil
-		end
-		
-		if not selected or fullSelection[2] then return end
-		
-		local language = self:GetLanguage(selected)
-		if language then
-			local tabId = self:GetTab(selected)
-			if not tabId then
-				tabId = self:CreateTab(selected, language)
-				self.Current = tabId
-			else
-				self:OpenTab(tabId)
-			end
-		end
-	end)
-end
-
-function Manager.GetLanguage(self: Manager, object: Instance)
-	if ValidateInstance(object, Languages.StateScript.Instances) then
-		return `StateScript`
-	elseif ValidateInstance(object, Languages.CustomBehavior.Instances) then
-		return `CustomBehavior`
-	end
-	
-	--if (object:IsA(`BoolValue`) and object:GetAttribute(`Type`) == `StateScript`) or (object:IsA(`BasePart`) and object.Name == `StateScriptPart`) then
-	--	return `StateScript`
-	--elseif (object:IsA(`BoolValue`) and object:GetAttribute(`Type`) == `CustomBehaviorCondition`) then
-	--	return `CustomBehavior`
-	--end
-end
-
-function Manager.CreateTab(self: Manager, object: Instance, language: string)
-	table.insert(self.Tabs, {
-		Object = object,
-		Tab = Document.new(object, language, self.Maids)
-	})
-
-	return #self.Tabs
-end
-
-function Manager.GetTab(self: Manager, object: Instance): number?
-	for index, tab in (self.Tabs) do
-		if tab.Object == object then
-			return index
-		end
-	end
-
-	return false
-end
-
-function Manager.DestroyTab(self: Manager, id: number)
-	self.Tabs[id].Tab:Destroy()
-	table.remove(self.Tabs, id)
-end
-
-function Manager.Clean(self: Manager)
-	for index, maid in (self.Maids) do
-		maid:Destroy()
-	end
-	
-	self.SelectConnection:Disconnect()
-	self.SelectConnection = nil
-end
-
-plugin.Unloading:Connect(function()
-	Manager:Clean()
-end)
-
-export type Manager = typeof(Manager)
-return Manager]]></ProtectedString>
-					<string name="ScriptGuid">{4b8a8382-d109-0056-6fea-2de29f6b2bd3}</string>
-					<BinaryString name="AttributesSerialize"></BinaryString>
-					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
-					<bool name="DefinesCapabilities">false</bool>
-					<string name="Name">Manager</string>
-					<int64 name="SourceAssetId">-1</int64>
-					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
-				</Properties>
-			</Item>
-			<Item class="ModuleScript" referent="RBX780CAD9E5BDF48979A9CB5EE3446A46B">
-				<Properties>
-					<Content name="LinkedSource"><null></null></Content>
-					<ProtectedString name="Source"><![CDATA[local Maid = require(`../Util/Maid`)
-
-local Interface = require(`../Settings/Interface`)
-local Encoder = require(`../Settings/Encoder`)
-local Decoder = require(`../Settings/Decoder`)
-
-local Settings = {}
-Settings.__index = Settings
-
-type self = {
-	Object: Instance,
-	Language: string,
-	Maid: {Maid.Maid}
-}
-type Settings = setmetatable<self, typeof(Settings)>
-
-function Settings.new(): Settings
-	local self = setmetatable({} :: self, Settings)
-	self.Maid = Maid.new()
-
-	self.Encoder = Encoder
-	self.Decoder = Decoder
-	self.Interface = Interface.new(self)
-
-	return self
-end
-
-function Settings.Destroy(self: Settings)
-	self.Maid:Destroy()
-	self = nil
-end
-
-return Settings]]></ProtectedString>
-					<string name="ScriptGuid">{81194033-0ee9-2133-ce5c-7aa1de1530d0}</string>
-					<BinaryString name="AttributesSerialize"></BinaryString>
-					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
-					<bool name="DefinesCapabilities">false</bool>
-					<string name="Name">Settings</string>
-					<int64 name="SourceAssetId">-1</int64>
-					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
-				</Properties>
-			</Item>
-		</Item>
-		<Item class="Script" referent="RBXDC757D8E79F34FD5850CFA47B784B7BA">
-			<Properties>
-				<ProtectedString name="Source"><![CDATA[local Toolbar: PluginToolbar = plugin:CreateToolbar(`EmeraldEditor`)
-local Button = Toolbar:CreateButton(`Emerald`, `Allows you to easily edit state-scripts and custom behaviors directly in Studio`, `rbxassetid://134453877661191`)
-local Plugin = require(`./Core/Plugin`)(plugin)
-local Manager = require(`./Core/Manager`)
-local EmeraldSettings = require(`./Core/Settings`).new()
-Manager:Init()
-
-Button.Click:Connect(function()
-	EmeraldSettings.Interface.Widget.Enabled = not EmeraldSettings.Interface.Widget.Enabled
-end)]]></ProtectedString>
-				<bool name="Disabled">false</bool>
-				<Content name="LinkedSource"><null></null></Content>
-				<token name="RunContext">3</token>
-				<string name="ScriptGuid">{1b789976-f94a-6cb5-4d06-a7217b4cf995}</string>
-				<BinaryString name="AttributesSerialize"></BinaryString>
-				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
-				<bool name="DefinesCapabilities">false</bool>
-				<string name="Name">Main</string>
-				<int64 name="SourceAssetId">-1</int64>
-				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
-			</Properties>
-		</Item>
-		<Item class="Folder" referent="RBX98C1C33048044C659D3EA4240BCDA9C2">
-			<Properties>
-				<BinaryString name="AttributesSerialize"></BinaryString>
-				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
-				<bool name="DefinesCapabilities">false</bool>
-				<string name="Name">UI</string>
-				<int64 name="SourceAssetId">-1</int64>
-				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
-			</Properties>
-			<Item class="ModuleScript" referent="RBXE733A64B32744D06815526774C33766C">
-				<Properties>
-					<Content name="LinkedSource"><null></null></Content>
-					<ProtectedString name="Source"><![CDATA[export type Class = string
-export type Properties = {[string]: any}
-export type Call = (class: Class) -> ((properties: Properties) -> Instance)
-export type Wrapped<Defaults> = (properties: {[Defaults]: any}) -> Instance
-
-local Create
-Create = function(class: Class)
-	return function(properties: Properties)
-		local object: Instance = Instance.new(class)
-		local parent: Instance?
-		
-		for k, v in (properties) do
-			if k == `Parent` then
-				parent = v
-			elseif k == `Children` then
-				for _, child in (v) do
-					if typeof(child) == `table` then
-						Create (child[1]) (child[2]).Parent = object
-					else
-						child.Parent = object
-					end
-				end
-			else
-				if typeof(v) == `function` then
-					object[k]:Connect(v)
-				else
-					object[k] = v
-				end
-			end
-		end
-		
-		if parent then
-			object.Parent = parent
-		end
-		
-		return object
-	end
-end
-
-return Create]]></ProtectedString>
-					<string name="ScriptGuid">{d5538fd6-a2ba-4788-c88e-bcf66692d8ac}</string>
-					<BinaryString name="AttributesSerialize"></BinaryString>
-					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
-					<bool name="DefinesCapabilities">false</bool>
-					<string name="Name">Create</string>
-					<int64 name="SourceAssetId">-1</int64>
-					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
-				</Properties>
-			</Item>
-			<Item class="ModuleScript" referent="RBX02AB8E5F12434707BD8AD6CD054C0A19">
-				<Properties>
-					<Content name="LinkedSource"><null></null></Content>
-					<ProtectedString name="Source"><![CDATA[local Create = require(`./Create`)
-
-return function(class: Create.Class)
-	return function(properties: Create.Properties)
-		return {class, properties}
-	end
-end]]></ProtectedString>
-					<string name="ScriptGuid">{915aa419-36ce-8ec7-8a30-e426cdd7822e}</string>
-					<BinaryString name="AttributesSerialize"></BinaryString>
-					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
-					<bool name="DefinesCapabilities">false</bool>
-					<string name="Name">Pseudo</string>
-					<int64 name="SourceAssetId">-1</int64>
-					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
-				</Properties>
-			</Item>
-			<Item class="ModuleScript" referent="RBXF421356142224BA89EEC48A0BAC09D82">
-				<Properties>
-					<Content name="LinkedSource"><null></null></Content>
-					<ProtectedString name="Source"><![CDATA[local Create = require(`./Create`)
-
-return function(class: Create.Class)
-	return function(defaults: Create.Properties)
-		return function(properties: Create.Properties)
-			for k, v in (defaults) do
-				if properties[k] then 
-					if k == `Children` then
-						for _, child in (v) do
-							table.insert(properties.Children, child)
-						end
-					end
-					
-					continue 
-				end
-				properties[k] = v
-			end
-			
-			return Create (class) (properties)
-		end
-	end
-end]]></ProtectedString>
-					<string name="ScriptGuid">{b13470a9-80fc-821e-c0de-3362678da689}</string>
-					<BinaryString name="AttributesSerialize"></BinaryString>
-					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
-					<bool name="DefinesCapabilities">false</bool>
-					<string name="Name">Wrapper</string>
-					<int64 name="SourceAssetId">-1</int64>
-					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
-				</Properties>
-			</Item>
-		</Item>
-		<Item class="Folder" referent="RBX9E8D20063B9E4276AAE13EBA2FF2C162">
-			<Properties>
-				<BinaryString name="AttributesSerialize"></BinaryString>
-				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
-				<bool name="DefinesCapabilities">false</bool>
-				<string name="Name">Util</string>
-				<int64 name="SourceAssetId">-1</int64>
-				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
-			</Properties>
-			<Item class="ModuleScript" referent="RBX7E7A361ADA354E80BC5335EF7CC053C0">
-				<Properties>
-					<Content name="LinkedSource"><null></null></Content>
-					<ProtectedString name="Source"><![CDATA[local Maid = {}
-Maid.__index = Maid
-
-type self = {
-	Jobs: {RBXScriptConnection | Instance}
-}
-export type Maid = setmetatable<self, typeof(Maid)>
-
-function Maid.new(root: {[any]: any}): Maid
-	local self = setmetatable({} :: self, Maid)
-	self.Jobs = {}
-
-	return self
-end
-
-function Maid.Add(self: Maid, object: Instance | RBXScriptConnection)
-	table.insert(self.Jobs, object)
-end
-
-function Maid.Clean(self: Maid)
-	for index, object in (self.Jobs) do
-		local objectType = typeof(object)
-		if objectType == `RBXScriptConnection` then
-			object:Disconnect()
-		elseif objectType == `Instance` then
-			object:Destroy()
-		end
-		
-		object = nil
-	end
-end
-
-function Maid.Destroy(self: Maid)
-	self:Clean()
-	self = nil
-end
-
-return Maid]]></ProtectedString>
-					<string name="ScriptGuid">{7bc19916-d119-03b6-de88-7b9dfedc1473}</string>
-					<BinaryString name="AttributesSerialize"></BinaryString>
-					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
-					<bool name="DefinesCapabilities">false</bool>
-					<string name="Name">Maid</string>
-					<int64 name="SourceAssetId">-1</int64>
-					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
-				</Properties>
-			</Item>
-			<Item class="ModuleScript" referent="RBXDEDBB7C57CA943A99C3BFD31691CFFDB">
-				<Properties>
-					<Content name="LinkedSource"><null></null></Content>
-					<ProtectedString name="Source"><![CDATA[local utf8lib = {}
-
-function utf8lib.sub(str: string, first: number, last: number?)
-	local len = utf8.len(str)
-	if not len then
-		return ``
-	end
-
-	first = math.max(first, 1)
-	last = last or len
-	last = math.min(last, len)
-
-	if first > last then
-		return ``
-	end
-
-	local startByte = utf8.offset(str, first)
-	local endByte = utf8.offset(str, last + 1)
-	if endByte then
-		return string.sub(str, startByte, endByte - 1)
-	else
-		return string.sub(str, startByte)
-	end
-end
-
-function utf8lib.len(str: string)
-	return utf8.len(str)
-end
-
-function utf8lib.chars(str: string): {string}
-	local chars = {}
-	local i = 1
-	local n = #str
-
-	while i <= n do
-		local start = i
-		i = utf8.offset(str, 2, i) or (n + 1)
-		chars[#chars + 1] = str:sub(start, i - 1)
-	end
-
-	return chars
-end
-
-return utf8lib]]></ProtectedString>
-					<string name="ScriptGuid">{0f307822-6911-c4b4-72df-f0c94489e78e}</string>
-					<BinaryString name="AttributesSerialize"></BinaryString>
-					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
-					<bool name="DefinesCapabilities">false</bool>
-					<string name="Name">utf8lib</string>
-					<int64 name="SourceAssetId">-1</int64>
-					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
-				</Properties>
-			</Item>
-		</Item>
-		<Item class="Folder" referent="RBX61654DBAC317428494073D9654CAA731">
-			<Properties>
+				<Color3 name="IconTint">
+					<R>0</R>
+					<G>0</G>
+					<B>0</B>
+				</Color3>
 				<BinaryString name="AttributesSerialize"></BinaryString>
 				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 				<bool name="DefinesCapabilities">false</bool>
 				<string name="Name">Settings</string>
+				<BinaryString name="SerializedOverrides"></BinaryString>
 				<int64 name="SourceAssetId">-1</int64>
 				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 			</Properties>
-			<Item class="ModuleScript" referent="RBX33B35A69DBFA4E269F30A061DE54B11C">
+			<Item class="ModuleScript" referent="RBX9F8BF156577541C6909B09D638BCDEB9">
 				<Properties>
 					<Content name="LinkedSource"><null></null></Content>
 					<ProtectedString name="Source"><![CDATA[local CoreGui = game:GetService("CoreGui")
@@ -2156,16 +1964,17 @@ function Interface.AddButton(self: Interface, settingName: string, setting: {Val
 end
 
 return Interface]]></ProtectedString>
-					<string name="ScriptGuid">{45e46108-1b5a-a3b0-0a78-1126914b2a0d}</string>
+					<string name="ScriptGuid">{D035A239-9875-4829-9303-335977127532}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
 					<string name="Name">Interface</string>
+					<BinaryString name="SerializedOverrides"></BinaryString>
 					<int64 name="SourceAssetId">-1</int64>
 					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBXB9F68B9558AF49CDB5D9287116A10581">
+			<Item class="ModuleScript" referent="RBX86D3C6790BCF4FC4990F72B20D06B6CF">
 				<Properties>
 					<Content name="LinkedSource"><null></null></Content>
 					<ProtectedString name="Source"><![CDATA[local Encoder = {}
@@ -2183,16 +1992,17 @@ function Encoder.boolean(value: boolean): string
 end
 
 return Encoder]]></ProtectedString>
-					<string name="ScriptGuid">{f0be251c-79c8-c7bd-80d8-5c14b47a4556}</string>
+					<string name="ScriptGuid">{11DE0592-DF8B-4527-8A61-E60C304206A9}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
 					<string name="Name">Encoder</string>
+					<BinaryString name="SerializedOverrides"></BinaryString>
 					<int64 name="SourceAssetId">-1</int64>
 					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBXC0E0EB429FD943ECB68A1A75BD489101">
+			<Item class="ModuleScript" referent="RBX627AA923F2144D71829B0BB70D4525E4">
 				<Properties>
 					<Content name="LinkedSource"><null></null></Content>
 					<ProtectedString name="Source"><![CDATA[local Decoder = {}
@@ -2210,26 +2020,33 @@ function Decoder.boolean(value: string): number
 end
 
 return Decoder]]></ProtectedString>
-					<string name="ScriptGuid">{1e97c139-525c-2422-0601-88568d60ebb9}</string>
+					<string name="ScriptGuid">{4A10958E-3FB4-4342-BCA5-AF2BE18F2558}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
 					<string name="Name">Decoder</string>
+					<BinaryString name="SerializedOverrides"></BinaryString>
 					<int64 name="SourceAssetId">-1</int64>
 					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 				</Properties>
 			</Item>
 		</Item>
-		<Item class="Folder" referent="RBXD43779DBBAA54C91B115A9F8863790B0">
+		<Item class="Folder" referent="RBXA20553AF18834CE1A243A6CA79A3D5B8">
 			<Properties>
+				<Color3 name="IconTint">
+					<R>0</R>
+					<G>0</G>
+					<B>0</B>
+				</Color3>
 				<BinaryString name="AttributesSerialize"></BinaryString>
 				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 				<bool name="DefinesCapabilities">false</bool>
 				<string name="Name">Shared</string>
+				<BinaryString name="SerializedOverrides"></BinaryString>
 				<int64 name="SourceAssetId">-1</int64>
 				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 			</Properties>
-			<Item class="ModuleScript" referent="RBX340A437F7500444E9F170E43BBF6FBEA">
+			<Item class="ModuleScript" referent="RBX2C855035364D40B88A497800D6A0F627">
 				<Properties>
 					<Content name="LinkedSource"><null></null></Content>
 					<ProtectedString name="Source"><![CDATA[local plugin = require(`../Core/Plugin`)()
@@ -2329,8 +2146,13 @@ local Settings = setmetatable({
 		Display = `Extension Command Color`,
 		Default = Color3.fromRGB(76, 207, 255)
 	},
-	TextColor = {
+	ExpressionColor = {
 		Index = GetIndex(2, 13),
+		Display = `Expression Color`,
+		Default = Color3.fromRGB(248, 109, 124)
+	},
+	TextColor = {
+		Index = GetIndex(2, 14),
 		Display = `Text Color`,
 		Default = Color3.fromRGB(204, 204, 204)
 	},
@@ -2373,15 +2195,289 @@ end
 
 Settings:Load()
 return Settings]]></ProtectedString>
-					<string name="ScriptGuid">{9464d23d-83a2-7eef-b09d-19a99f6d259b}</string>
+					<string name="ScriptGuid">{23B1C3BB-ABC2-43B8-8EC2-D7BEC5A87BA0}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
 					<string name="Name">Settings</string>
+					<BinaryString name="SerializedOverrides"></BinaryString>
 					<int64 name="SourceAssetId">-1</int64>
 					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 				</Properties>
 			</Item>
+		</Item>
+		<Item class="Folder" referent="RBX143AA14D6A604CCCB587EC57E0C3E12E">
+			<Properties>
+				<Color3 name="IconTint">
+					<R>0</R>
+					<G>0</G>
+					<B>0</B>
+				</Color3>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+				<bool name="DefinesCapabilities">false</bool>
+				<string name="Name">UI</string>
+				<BinaryString name="SerializedOverrides"></BinaryString>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			</Properties>
+			<Item class="ModuleScript" referent="RBXC656FCD5BF06457382678D498355ECB2">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[export type Class = string
+export type Properties = {[string]: any}
+export type Call = (class: Class) -> ((properties: Properties) -> Instance)
+export type Wrapped<Defaults> = (properties: {[Defaults]: any}) -> Instance
+
+local Create
+Create = function(class: Class)
+	return function(properties: Properties)
+		local object: Instance = Instance.new(class)
+		local parent: Instance?
+		
+		for k, v in (properties) do
+			if k == `Parent` then
+				parent = v
+			elseif k == `Children` then
+				for _, child in (v) do
+					if typeof(child) == `table` then
+						Create (child[1]) (child[2]).Parent = object
+					else
+						child.Parent = object
+					end
+				end
+			else
+				if typeof(v) == `function` then
+					object[k]:Connect(v)
+				else
+					object[k] = v
+				end
+			end
+		end
+		
+		if parent then
+			object.Parent = parent
+		end
+		
+		return object
+	end
+end
+
+return Create]]></ProtectedString>
+					<string name="ScriptGuid">{39A00C2A-A548-42B6-BB6D-2F49D120B812}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">Create</string>
+					<BinaryString name="SerializedOverrides"></BinaryString>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX1C394A4DA08E4E62BC82E81A1B030787">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[local Create = require(`./Create`)
+
+return function(class: Create.Class)
+	return function(properties: Create.Properties)
+		return {class, properties}
+	end
+end]]></ProtectedString>
+					<string name="ScriptGuid">{99C3FF63-1C61-4ADA-8390-1FEE2E8A30C7}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">Pseudo</string>
+					<BinaryString name="SerializedOverrides"></BinaryString>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX9ADF9DFEA1274177A89FC2862A6D0E68">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[local Create = require(`./Create`)
+
+return function(class: Create.Class)
+	return function(defaults: Create.Properties)
+		return function(properties: Create.Properties)
+			for k, v in (defaults) do
+				if properties[k] then 
+					if k == `Children` then
+						for _, child in (v) do
+							table.insert(properties.Children, child)
+						end
+					end
+					
+					continue 
+				end
+				properties[k] = v
+			end
+			
+			return Create (class) (properties)
+		end
+	end
+end]]></ProtectedString>
+					<string name="ScriptGuid">{3BAED018-E825-4B9C-8BF4-3F6512DAA0E9}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">Wrapper</string>
+					<BinaryString name="SerializedOverrides"></BinaryString>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+			</Item>
+		</Item>
+		<Item class="Folder" referent="RBXBAE88E0F79934A7E83F5146B7A96CA0F">
+			<Properties>
+				<Color3 name="IconTint">
+					<R>0</R>
+					<G>0</G>
+					<B>0</B>
+				</Color3>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+				<bool name="DefinesCapabilities">false</bool>
+				<string name="Name">Util</string>
+				<BinaryString name="SerializedOverrides"></BinaryString>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			</Properties>
+			<Item class="ModuleScript" referent="RBX9A611608FE404667BF459E9A424E2FDD">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[local Maid = {}
+Maid.__index = Maid
+
+type self = {
+	Jobs: {RBXScriptConnection | Instance}
+}
+export type Maid = setmetatable<self, typeof(Maid)>
+
+function Maid.new(root: {[any]: any}): Maid
+	local self = setmetatable({} :: self, Maid)
+	self.Jobs = {}
+
+	return self
+end
+
+function Maid.Add(self: Maid, object: Instance | RBXScriptConnection)
+	table.insert(self.Jobs, object)
+end
+
+function Maid.Clean(self: Maid)
+	for index, object in (self.Jobs) do
+		local objectType = typeof(object)
+		if objectType == `RBXScriptConnection` then
+			object:Disconnect()
+		elseif objectType == `Instance` then
+			object:Destroy()
+		end
+		
+		object = nil
+	end
+end
+
+function Maid.Destroy(self: Maid)
+	self:Clean()
+	self = nil
+end
+
+return Maid]]></ProtectedString>
+					<string name="ScriptGuid">{C63779FB-B1BD-4FC0-919D-56510CDDC249}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">Maid</string>
+					<BinaryString name="SerializedOverrides"></BinaryString>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBXA020695640494D858762AF0FA797200D">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[local utf8lib = {}
+
+function utf8lib.sub(str: string, first: number, last: number?)
+	local len = utf8.len(str)
+	if not len then
+		return ``
+	end
+
+	first = math.max(first, 1)
+	last = last or len
+	last = math.min(last, len)
+
+	if first > last then
+		return ``
+	end
+
+	local startByte = utf8.offset(str, first)
+	local endByte = utf8.offset(str, last + 1)
+	if endByte then
+		return string.sub(str, startByte, endByte - 1)
+	else
+		return string.sub(str, startByte)
+	end
+end
+
+function utf8lib.len(str: string)
+	return utf8.len(str)
+end
+
+function utf8lib.chars(str: string): {string}
+	local chars = {}
+	local i = 1
+	local n = #str
+
+	while i <= n do
+		local start = i
+		i = utf8.offset(str, 2, i) or (n + 1)
+		chars[#chars + 1] = str:sub(start, i - 1)
+	end
+
+	return chars
+end
+
+return utf8lib]]></ProtectedString>
+					<string name="ScriptGuid">{AC7124EC-931E-4813-87E7-3C5219AC146A}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">utf8lib</string>
+					<BinaryString name="SerializedOverrides"></BinaryString>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+			</Item>
+		</Item>
+		<Item class="Script" referent="RBX31A82337E9474B22AA66D4571C9E9F5E">
+			<Properties>
+				<ProtectedString name="Source"><![CDATA[local Toolbar: PluginToolbar = plugin:CreateToolbar(`EmeraldEditor`)
+local Button = Toolbar:CreateButton(`Emerald`, `Allows you to easily edit state-scripts and custom behaviors directly in Studio`, `rbxassetid://134453877661191`)
+local Plugin = require(`./Core/Plugin`)(plugin)
+local Manager = require(`./Core/Manager`)
+local EmeraldSettings = require(`./Core/Settings`).new()
+Manager:Init()
+
+Button.Click:Connect(function()
+	EmeraldSettings.Interface.Widget.Enabled = not EmeraldSettings.Interface.Widget.Enabled
+end)]]></ProtectedString>
+				<bool name="Disabled">false</bool>
+				<Content name="LinkedSource"><null></null></Content>
+				<token name="RunContext">3</token>
+				<string name="ScriptGuid">{9A4FAE46-A227-440D-849A-F8B50CC8BCAF}</string>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+				<bool name="DefinesCapabilities">false</bool>
+				<string name="Name">Main</string>
+				<BinaryString name="SerializedOverrides"></BinaryString>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			</Properties>
 		</Item>
 	</Item>
 	<SharedStrings>
