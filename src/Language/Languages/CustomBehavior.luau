@@ -82,7 +82,7 @@ return {
 			Arguments = {},
 			Style = `CommandColor`
 		},
-		[`END`] = {
+		[`DESPAWN`] = {
 			Arguments = {},
 			Style = `CommandColor`
 		},
@@ -102,6 +102,14 @@ return {
 			Arguments = {},
 			Style = `CommandColor`
 		},
+		[`HOLD`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`MOVETODYNAMIC`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
 		[`ONCLEANUP`] = {
 			Arguments = {},
 			Style = `CommandColor`
@@ -114,7 +122,7 @@ return {
 			Arguments = {},
 			Style = `CommandColor`
 		},
-		[`MOVETODYNAMIC`] = {
+		[`SETFACE`] = {
 			Arguments = {},
 			Style = `CommandColor`
 		},
@@ -126,15 +134,11 @@ return {
 			Arguments = {},
 			Style = `CommandColor`
 		},
-		[`SET`] = {
-			Arguments = {},
-			Style = `CommandColor`
-		},
-		[`SETFACE`] = {
-			Arguments = {},
-			Style = `CommandColor`
-		},
 		[`TAKEDOWNIMMUNE`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`TYPEANIM`] = {
 			Arguments = {},
 			Style = `CommandColor`
 		},

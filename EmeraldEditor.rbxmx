@@ -43,7 +43,7 @@ return function(pluginSource: Plugin?): Plugin?
 	
 	return pluginGiven
 end]]></ProtectedString>
-					<string name="ScriptGuid">{D4F59084-772A-4196-9DCC-FB99C091830E}</string>
+					<string name="ScriptGuid">{0ef1b9ce-710e-d977-bf6a-1afe3521b673}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
@@ -109,7 +109,7 @@ function Document.Destroy(self: Document)
 end
 
 return Document]]></ProtectedString>
-					<string name="ScriptGuid">{ACC268D5-55D4-4518-A2E5-AB5286AD278E}</string>
+					<string name="ScriptGuid">{4f32951f-b1c0-4522-503d-050a20782b23}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
@@ -259,7 +259,7 @@ end)
 
 export type Manager = typeof(Manager)
 return Manager]]></ProtectedString>
-					<string name="ScriptGuid">{F6A8FE52-5058-494D-91C2-44A23F06D2C3}</string>
+					<string name="ScriptGuid">{4b8a8382-d109-0056-6fea-2de29f6b2bd3}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
@@ -305,7 +305,7 @@ function Settings.Destroy(self: Settings)
 end
 
 return Settings]]></ProtectedString>
-					<string name="ScriptGuid">{4511F4CF-27BB-474C-88A3-B6B5F31EFCA2}</string>
+					<string name="ScriptGuid">{81194033-0ee9-2133-ce5c-7aa1de1530d0}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
@@ -475,7 +475,7 @@ function Suggestions.Update(self: Suggestions)
 end
 
 return Suggestions]]></ProtectedString>
-					<string name="ScriptGuid">{0FBAC4F5-0B82-45E2-AE6F-2ABAB87832A9}</string>
+					<string name="ScriptGuid">{5ff1f804-6574-a658-36bf-8ff98ae8aabe}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
@@ -608,7 +608,7 @@ function Caret.GetPosition(self: Caret): Vector2
 end
 
 return Caret]]></ProtectedString>
-					<string name="ScriptGuid">{4A9ECF61-A0C0-4268-A534-EE49B65E9195}</string>
+					<string name="ScriptGuid">{32cdd9e4-767e-092a-ad54-dae88ffcb7e9}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
@@ -874,7 +874,7 @@ function Interface.UpdateCanvas(self: Interface)
 end
 
 return Interface]]></ProtectedString>
-					<string name="ScriptGuid">{B67C2FF2-1DB4-40D4-ACA3-B64941A9978D}</string>
+					<string name="ScriptGuid">{4edd7293-12dd-e339-f622-dc5c363d1582}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
@@ -927,7 +927,7 @@ function Renderer.Render(self: Renderer)
 end
 
 return Renderer]]></ProtectedString>
-					<string name="ScriptGuid">{599E2A44-BB2A-489D-9F18-21C010328DAF}</string>
+					<string name="ScriptGuid">{5a618d14-9980-961e-d591-e5039f27c5f5}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
@@ -981,7 +981,7 @@ function State.new(root: {[any]: any}): State
 end
 
 return State]]></ProtectedString>
-					<string name="ScriptGuid">{A9E4B869-FA52-40BB-96C7-65ABC9537C16}</string>
+					<string name="ScriptGuid">{a90697f0-0371-54dc-80aa-4b7ea4a5459c}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
@@ -1021,7 +1021,7 @@ function Selection.Update(self: Selection)
 end
 
 return Selection]]></ProtectedString>
-					<string name="ScriptGuid">{AD794B35-4CD4-485B-A01F-79D510428E9A}</string>
+					<string name="ScriptGuid">{72a83aaf-65e1-cd1e-ad68-dea6e7b3e646}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
@@ -1058,7 +1058,7 @@ function Writer:Write()
 end
 
 return Writer]]></ProtectedString>
-					<string name="ScriptGuid">{A5A985AC-EB4E-421F-8225-1A4EC6EB860A}</string>
+					<string name="ScriptGuid">{4a4a3798-42cc-363b-5046-6cd749c97bf3}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
@@ -1128,7 +1128,7 @@ end
 
 type Autocomplete = typeof(Autocomplete)
 return Autocomplete]]></ProtectedString>
-					<string name="ScriptGuid">{7A2BB5C9-7136-46E8-83BC-27305D002448}</string>
+					<string name="ScriptGuid">{db504e27-b89d-9664-59b2-a051e33ab77e}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
@@ -1180,7 +1180,7 @@ return function(language: string, tokens: {})
 
 	return Tokenizer:ToSource(tokens)
 end]]></ProtectedString>
-					<string name="ScriptGuid">{881265B9-A731-48C9-B0AA-EF145F50B482}</string>
+					<string name="ScriptGuid">{35d4a789-beb2-872a-81f8-cc58b36a614f}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
@@ -1269,7 +1269,7 @@ end
 
 type Tokenizer = typeof(Tokenizer)
 return Tokenizer]]></ProtectedString>
-					<string name="ScriptGuid">{FD3AF074-8947-4AA6-A107-3F478A6D7933}</string>
+					<string name="ScriptGuid">{5034635e-06b8-a1c9-1452-e3bed349121a}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
@@ -1381,7 +1381,7 @@ return Tokenizer]]></ProtectedString>
 			Arguments = {},
 			Style = `CommandColor`
 		},
-		[`END`] = {
+		[`DESPAWN`] = {
 			Arguments = {},
 			Style = `CommandColor`
 		},
@@ -1401,6 +1401,14 @@ return Tokenizer]]></ProtectedString>
 			Arguments = {},
 			Style = `CommandColor`
 		},
+		[`HOLD`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`MOVETODYNAMIC`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
 		[`ONCLEANUP`] = {
 			Arguments = {},
 			Style = `CommandColor`
@@ -1413,7 +1421,7 @@ return Tokenizer]]></ProtectedString>
 			Arguments = {},
 			Style = `CommandColor`
 		},
-		[`MOVETODYNAMIC`] = {
+		[`SETFACE`] = {
 			Arguments = {},
 			Style = `CommandColor`
 		},
@@ -1425,15 +1433,11 @@ return Tokenizer]]></ProtectedString>
 			Arguments = {},
 			Style = `CommandColor`
 		},
-		[`SET`] = {
-			Arguments = {},
-			Style = `CommandColor`
-		},
-		[`SETFACE`] = {
-			Arguments = {},
-			Style = `CommandColor`
-		},
 		[`TAKEDOWNIMMUNE`] = {
+			Arguments = {},
+			Style = `CommandColor`
+		},
+		[`TYPEANIM`] = {
 			Arguments = {},
 			Style = `CommandColor`
 		},
@@ -1447,7 +1451,7 @@ return Tokenizer]]></ProtectedString>
 		},
 	}
 }]]></ProtectedString>
-						<string name="ScriptGuid">{154FEDB1-5222-4CCE-8892-5BDF21F9D5C5}</string>
+						<string name="ScriptGuid">{218826ba-d7b6-58af-9d5b-63ed4cb71e2b}</string>
 						<BinaryString name="AttributesSerialize"></BinaryString>
 						<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 						<bool name="DefinesCapabilities">false</bool>
@@ -1693,7 +1697,7 @@ return Tokenizer]]></ProtectedString>
 		},
 	}
 }]]></ProtectedString>
-						<string name="ScriptGuid">{6EFD6A74-CB80-4DF8-AC18-D856BD4FA71E}</string>
+						<string name="ScriptGuid">{c3a7b1c9-b829-2f6d-6e71-e19e087c3e94}</string>
 						<BinaryString name="AttributesSerialize"></BinaryString>
 						<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 						<bool name="DefinesCapabilities">false</bool>
@@ -1717,7 +1721,7 @@ return Tokenizer]]></ProtectedString>
 		end
 	end
 end]]></ProtectedString>
-					<string name="ScriptGuid">{7E1F9F97-346E-4377-81BF-DD2D00CB0E71}</string>
+					<string name="ScriptGuid">{b0629c8e-2444-3dca-95ec-19fcc82d8df2}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
@@ -1964,7 +1968,7 @@ function Interface.AddButton(self: Interface, settingName: string, setting: {Val
 end
 
 return Interface]]></ProtectedString>
-					<string name="ScriptGuid">{D035A239-9875-4829-9303-335977127532}</string>
+					<string name="ScriptGuid">{45e46108-1b5a-a3b0-0a78-1126914b2a0d}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
@@ -1992,7 +1996,7 @@ function Encoder.boolean(value: boolean): string
 end
 
 return Encoder]]></ProtectedString>
-					<string name="ScriptGuid">{11DE0592-DF8B-4527-8A61-E60C304206A9}</string>
+					<string name="ScriptGuid">{f0be251c-79c8-c7bd-80d8-5c14b47a4556}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
@@ -2020,7 +2024,7 @@ function Decoder.boolean(value: string): number
 end
 
 return Decoder]]></ProtectedString>
-					<string name="ScriptGuid">{4A10958E-3FB4-4342-BCA5-AF2BE18F2558}</string>
+					<string name="ScriptGuid">{1e97c139-525c-2422-0601-88568d60ebb9}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
@@ -2195,7 +2199,7 @@ end
 
 Settings:Load()
 return Settings]]></ProtectedString>
-					<string name="ScriptGuid">{23B1C3BB-ABC2-43B8-8EC2-D7BEC5A87BA0}</string>
+					<string name="ScriptGuid">{9464d23d-83a2-7eef-b09d-19a99f6d259b}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
@@ -2264,7 +2268,7 @@ Create = function(class: Class)
 end
 
 return Create]]></ProtectedString>
-					<string name="ScriptGuid">{39A00C2A-A548-42B6-BB6D-2F49D120B812}</string>
+					<string name="ScriptGuid">{d5538fd6-a2ba-4788-c88e-bcf66692d8ac}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
@@ -2284,7 +2288,7 @@ return function(class: Create.Class)
 		return {class, properties}
 	end
 end]]></ProtectedString>
-					<string name="ScriptGuid">{99C3FF63-1C61-4ADA-8390-1FEE2E8A30C7}</string>
+					<string name="ScriptGuid">{915aa419-36ce-8ec7-8a30-e426cdd7822e}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
@@ -2319,7 +2323,7 @@ return function(class: Create.Class)
 		end
 	end
 end]]></ProtectedString>
-					<string name="ScriptGuid">{3BAED018-E825-4B9C-8BF4-3F6512DAA0E9}</string>
+					<string name="ScriptGuid">{b13470a9-80fc-821e-c0de-3362678da689}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
@@ -2386,7 +2390,7 @@ function Maid.Destroy(self: Maid)
 end
 
 return Maid]]></ProtectedString>
-					<string name="ScriptGuid">{C63779FB-B1BD-4FC0-919D-56510CDDC249}</string>
+					<string name="ScriptGuid">{7bc19916-d119-03b6-de88-7b9dfedc1473}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
@@ -2443,7 +2447,7 @@ function utf8lib.chars(str: string): {string}
 end
 
 return utf8lib]]></ProtectedString>
-					<string name="ScriptGuid">{AC7124EC-931E-4813-87E7-3C5219AC146A}</string>
+					<string name="ScriptGuid">{0f307822-6911-c4b4-72df-f0c94489e78e}</string>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
@@ -2469,7 +2473,7 @@ end)]]></ProtectedString>
 				<bool name="Disabled">false</bool>
 				<Content name="LinkedSource"><null></null></Content>
 				<token name="RunContext">3</token>
-				<string name="ScriptGuid">{9A4FAE46-A227-440D-849A-F8B50CC8BCAF}</string>
+				<string name="ScriptGuid">{1b789976-f94a-6cb5-4d06-a7217b4cf995}</string>
 				<BinaryString name="AttributesSerialize"></BinaryString>
 				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 				<bool name="DefinesCapabilities">false</bool>
