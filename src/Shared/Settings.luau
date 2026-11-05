@@ -112,7 +112,7 @@ local Categories = {
 		}
 	},
 	
-	[`1-Behavior`] = {
+	[`2-Behavior`] = {
 		[`1-Rendering`] = {
 			UseFullSourceRendering = {
 				Index = GetIndex(1, 1),

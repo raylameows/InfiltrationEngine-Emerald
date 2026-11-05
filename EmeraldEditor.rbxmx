@@ -127,6 +127,8 @@ return Document]]></ProtectedString>
 local plugin = require(`./Plugin`)()
 local Document = require(`./Document`)
 local Initiator = require(`../Language/Initiator`)
+local DebugPrint = require(`../Shared/DebugPrint`)
+local Version = require(`../Shared/Version`)
 
 local Languages = {}
 for _, language in (script.Parent.Parent.Language.Languages:GetChildren()) do
@@ -179,6 +181,12 @@ local function ValidateInstance(instance: Instance, rulesets: {}): boolean
 end
 
 function Manager.Init(self: Manager)
+	DebugPrint(`Current Version: {Version.getCurrent()}`)
+	DebugPrint(`Newest Version: {Version.getNewest()}`)
+	if Version.isOutdated() then
+		warn(`Emerald :: Your version of Emerald ({Version.getCurrent()}) is outdated! (latest: {Version.getNewest()})`)
+	end
+	
 	for _, language in (script.Parent.Parent.Language.Languages:GetChildren()) do
 		Initiator(language.Name)
 	end
@@ -627,6 +635,7 @@ local TweenService = game:GetService("TweenService")
 
 local Create = require(`../UI/Create`)
 
+local Version = require(`../Shared/Version`)
 local Settings = require(`../Shared/Settings`)
 local plugin = require(`../Core/Plugin`)()
 
@@ -676,9 +685,29 @@ function Interface.new(root: {[any]: any}): Interface
 	self.Screen = Create "ScreenGui" {
 		Archivable = true,
 		Name = `StateScriptEditor`,
+		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
 
 		Parent = CoreGui
 	}
+	
+	
+	-- This looks mid actually
+	--self.Version = Create "TextLabel" {
+	--	Size = UDim2.fromScale(1, 1),
+	--	ZIndex = 999,
+
+	--	BackgroundTransparency = 1,
+	--	TextTransparency = 0.5,
+		
+	--	Text = Version.getCurrent(),
+	--	TextSize = 17,
+	--	TextColor3 = Version.isOutdated() and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(255, 255, 255),
+	--	FontFace = Font.fromEnum(Enum.Font.Code),
+	--	TextXAlignment = Enum.TextXAlignment.Right,
+	--	TextYAlignment = Enum.TextYAlignment.Bottom,
+		
+	--	Parent = self.Screen
+	--}
 	
 	self.Toggle = Create "ImageButton" {
 		AnchorPoint = Vector2.new(1, 1),
@@ -695,6 +724,28 @@ function Interface.new(root: {[any]: any}): Interface
 		Children = {
 			Stroke = Create "UIStroke" {
 				Color = Color3.new(1, 1, 1),
+				Thickness = 2,
+			}
+		}
+	}
+	
+	self.Warning = Create "ImageButton" {
+		AnchorPoint = Vector2.new(1, 1),
+		Size = UDim2.fromOffset(50, 50),
+		Position = UDim2.new(1, -20, 1, -90),
+		BackgroundTransparency = 0,
+		BackgroundColor3 = settings().Studio.Theme:GetColor(Enum.StudioStyleGuideColor.ScriptBackground),
+		ZIndex = 500,
+		ImageColor3 = Color3.fromRGB(255, 120, 120),
+		Rotation = activated and 0 or 180,
+		Visible = Version.isOutdated(),
+
+		Image = `rbxassetid://105983344931670`,
+
+		Parent = self.Screen,
+		Children = {
+			Stroke = Create "UIStroke" {
+				Color = Color3.fromRGB(255, 120, 120),
 				Thickness = 2,
 			}
 		}
@@ -853,6 +904,112 @@ function Interface.new(root: {[any]: any}): Interface
 			activated = true
 			TweenService:Create(self.Holder, tinfo, {Position = UDim2.fromScale(0, 0)}):Play()
 			TweenService:Create(self.Toggle, tinfo, {Rotation = 0}):Play()
+		end
+	end)
+	
+	local warningPopup
+	self.Warning.MouseButton1Down:Connect(function()
+		if warningPopup then
+			--warningPopup:Destroy()
+			--TweenService:Create(self.Toggle, tinfo, {Rotation = 180}):Play()
+		else
+			warningPopup = Create "CanvasGroup" {
+				GroupTransparency = 1,
+				BorderSizePixel = 0,
+				BackgroundColor3 = Color3.fromRGB(47, 47, 47),
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(0.5, 0.5),
+				Size = UDim2.fromScale(0.3, 0.4),
+				ZIndex = 5000,
+				Parent = self.Screen,
+				
+				Children = {
+					Header = Create "TextLabel" {
+						Size = UDim2.fromScale(1, 0.2),
+						Position = UDim2.fromScale(0, 0),
+						ZIndex = 500000,
+
+						BackgroundTransparency = 1,
+						TextTransparency = 0,
+
+						TextScaled = true,
+						TextColor3 = Color3.fromRGB(255, 125, 125),
+						FontFace = Font.fromEnum(Enum.Font.Code),
+						TextXAlignment = Enum.TextXAlignment.Center,
+						TextYAlignment = Enum.TextYAlignment.Top,
+
+						Text = `Outdated`
+					},
+					Description = Create "TextLabel" {
+						Size = UDim2.fromScale(0.8, 0.8),
+						AnchorPoint = Vector2.new(0.5, 0),
+						Position = UDim2.fromScale(0.5, 0.2),
+						ZIndex = 500000,
+
+						BackgroundTransparency = 1,
+						TextTransparency = 0,
+
+						TextScaled = true,
+						TextColor3 = Color3.fromRGB(255, 255, 255),
+						FontFace = Font.fromEnum(Enum.Font.Code),
+						TextXAlignment = Enum.TextXAlignment.Center,
+						TextYAlignment = Enum.TextYAlignment.Top,
+
+						Text = `Your version of Emerald ({Version.getCurrent()}) is outdated. Update to the newest version ({Version.getNewest()}) NOW!!!!!!!!`,
+						
+						Children = {
+							Create "UITextSizeConstraint" {
+								MaxTextSize = 25,
+							}
+						}
+					},
+					Stroke = Create "UIStroke" {
+						Color = Color3.fromRGB(255, 125, 125),
+						Transparency = 1,
+						Thickness = 2,
+						ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+					}
+				}
+			}
+			local button: TextButton = Create "TextButton" {
+				ZIndex = 500000,
+				BorderSizePixel = 0,
+				BackgroundColor3 = Color3.fromRGB(130, 131, 78),
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(0.5, 0.8),
+				Size = UDim2.fromScale(0.7, 0.2),
+				
+				TextScaled = true,
+				TextColor3 = Color3.fromRGB(255, 255, 255),
+				FontFace = Font.fromEnum(Enum.Font.Code),
+				
+				Text = `Understood`,
+				
+				Parent = warningPopup,
+				Children = {
+					TextSize = Create "UITextSizeConstraint" {
+						MaxTextSize = 40,
+					},
+					Stroke = Create "UIStroke" {
+						Color = Color3.fromRGB(255, 255, 255),
+						Thickness = 2,
+						ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+					}
+				}
+			}
+			button.Activated:Once(function()
+				TweenService:Create(warningPopup, tinfo, {GroupTransparency = 1}):Play()
+				TweenService:Create(warningPopup.UIStroke, tinfo, {Transparency = 1}):Play()
+				task.wait(tinfo.Time)
+				warningPopup:Destroy()
+				warningPopup = nil
+			end)
+			TweenService:Create(warningPopup, tinfo, {GroupTransparency = 0}):Play()
+			TweenService:Create(warningPopup.UIStroke, tinfo, {Transparency = 0}):Play()
+			TweenService:Create(self.Warning, tinfo, {Rotation = 360}):Play()
+			task.delay(tinfo.Time, function()
+				self.Warning.Rotation = 0
+			end)
 		end
 	end)
 	
@@ -1992,6 +2149,7 @@ end]]></ProtectedString>
 					<Content name="LinkedSource"><null></null></Content>
 					<ProtectedString name="Source"><![CDATA[local CoreGui = game:GetService("CoreGui")
 
+local Version = require(`../Shared/Version`)
 local Settings = require(`../Shared/Settings`)
 local Create = require(`../UI/Create`)
 local plugin = require(`../Core/Plugin`)()
@@ -2024,9 +2182,26 @@ function Interface.new(root: {[any]: any}): Interface
 		)
 	)
 	self.Widget.Title = `Emerald Settings`
-	
+
 	self.SelectedCategory = nil
-	
+
+	self.Version = Create "TextLabel" {
+		Size = UDim2.fromScale(1, 1),
+		ZIndex = 999,
+
+		BackgroundTransparency = 1,
+		TextTransparency = 0,
+
+		Text = Version.getCurrent(),
+		TextSize = 18,
+		TextColor3 = Version.isOutdated() and Color3.fromRGB(207, 9, 9) or Color3.fromRGB(108, 108, 108),
+		FontFace = Font.fromEnum(Enum.Font.Code),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextYAlignment = Enum.TextYAlignment.Bottom,
+
+		Parent = self.Widget
+	}
+
 	self.Categories = Create "ScrollingFrame" {
 		Size = UDim2.fromScale(0.25, 1),
 		BorderSizePixel = 0,
@@ -2539,7 +2714,7 @@ local Categories = {
 		}
 	},
 	
-	[`1-Behavior`] = {
+	[`2-Behavior`] = {
 		[`1-Rendering`] = {
 			UseFullSourceRendering = {
 				Index = GetIndex(1, 1),
@@ -2629,6 +2804,65 @@ end]]></ProtectedString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
 					<string name="Name">DebugPrint</string>
+					<BinaryString name="SerializedOverrides"></BinaryString>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBXE67554C2E13C4A3F821EA4F4B2D7D730">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[local HttpService = game:GetService("HttpService")
+
+local CurrentVersion = require(`./CurrentVersion`)
+local NewestVersion = nil
+local Version = {}
+
+function Version.getNewest(): string
+	if NewestVersion then
+		return NewestVersion
+	end
+	
+	local success, result = pcall(function()
+		return HttpService:GetAsync(`https://raw.githubusercontent.com/raylameows/InfiltrationEngine-Emerald/refs/heads/main/src/Shared/CurrentVersion.luau?t={os.clock()}`)
+	end)
+	
+	if success then
+		NewestVersion = result:match("return%s+[`\"]([^`\"]+)[`\"]")
+	end
+	
+	return NewestVersion or `vX.X.X`
+end
+
+function Version.getCurrent(): string
+	return CurrentVersion
+end
+
+function Version.isOutdated(): boolean
+	return Version.getNewest() ~= Version.getCurrent()
+end
+
+type Version = typeof(Version)
+return Version]]></ProtectedString>
+					<string name="ScriptGuid">{d672c74b-6b4e-fd82-da75-052bc6edd303}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">Version</string>
+					<BinaryString name="SerializedOverrides"></BinaryString>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBXB4F95924C392460ABBAF367AD5FD4CD6">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source">return `v1.3.0`</ProtectedString>
+					<string name="ScriptGuid">{ff88c82c-67c8-e9af-629c-bdd13ba60b97}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">CurrentVersion</string>
 					<BinaryString name="SerializedOverrides"></BinaryString>
 					<int64 name="SourceAssetId">-1</int64>
 					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>

@@ -3,6 +3,8 @@ local Selection = game:GetService("Selection")
 local plugin = require(`./Plugin`)()
 local Document = require(`./Document`)
 local Initiator = require(`../Language/Initiator`)
+local DebugPrint = require(`../Shared/DebugPrint`)
+local Version = require(`../Shared/Version`)
 
 local Languages = {}
 for _, language in (script.Parent.Parent.Language.Languages:GetChildren()) do
@@ -55,6 +57,12 @@ local function ValidateInstance(instance: Instance, rulesets: {}): boolean
 end
 
 function Manager.Init(self: Manager)
+	DebugPrint(`Current Version: {Version.getCurrent()}`)
+	DebugPrint(`Newest Version: {Version.getNewest()}`)
+	if Version.isOutdated() then
+		warn(`Emerald :: Your version of Emerald ({Version.getCurrent()}) is outdated! (latest: {Version.getNewest()})`)
+	end
+	
 	for _, language in (script.Parent.Parent.Language.Languages:GetChildren()) do
 		Initiator(language.Name)
 	end

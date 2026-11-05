@@ -4,6 +4,7 @@ local TweenService = game:GetService("TweenService")
 
 local Create = require(`../UI/Create`)
 
+local Version = require(`../Shared/Version`)
 local Settings = require(`../Shared/Settings`)
 local plugin = require(`../Core/Plugin`)()
 
@@ -53,9 +54,29 @@ function Interface.new(root: {[any]: any}): Interface
 	self.Screen = Create "ScreenGui" {
 		Archivable = true,
 		Name = `StateScriptEditor`,
+		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
 
 		Parent = CoreGui
 	}
+	
+	
+	-- This looks mid actually
+	--self.Version = Create "TextLabel" {
+	--	Size = UDim2.fromScale(1, 1),
+	--	ZIndex = 999,
+
+	--	BackgroundTransparency = 1,
+	--	TextTransparency = 0.5,
+		
+	--	Text = Version.getCurrent(),
+	--	TextSize = 17,
+	--	TextColor3 = Version.isOutdated() and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(255, 255, 255),
+	--	FontFace = Font.fromEnum(Enum.Font.Code),
+	--	TextXAlignment = Enum.TextXAlignment.Right,
+	--	TextYAlignment = Enum.TextYAlignment.Bottom,
+		
+	--	Parent = self.Screen
+	--}
 	
 	self.Toggle = Create "ImageButton" {
 		AnchorPoint = Vector2.new(1, 1),
@@ -72,6 +93,28 @@ function Interface.new(root: {[any]: any}): Interface
 		Children = {
 			Stroke = Create "UIStroke" {
 				Color = Color3.new(1, 1, 1),
+				Thickness = 2,
+			}
+		}
+	}
+	
+	self.Warning = Create "ImageButton" {
+		AnchorPoint = Vector2.new(1, 1),
+		Size = UDim2.fromOffset(50, 50),
+		Position = UDim2.new(1, -20, 1, -90),
+		BackgroundTransparency = 0,
+		BackgroundColor3 = settings().Studio.Theme:GetColor(Enum.StudioStyleGuideColor.ScriptBackground),
+		ZIndex = 500,
+		ImageColor3 = Color3.fromRGB(255, 120, 120),
+		Rotation = activated and 0 or 180,
+		Visible = Version.isOutdated(),
+
+		Image = `rbxassetid://105983344931670`,
+
+		Parent = self.Screen,
+		Children = {
+			Stroke = Create "UIStroke" {
+				Color = Color3.fromRGB(255, 120, 120),
 				Thickness = 2,
 			}
 		}
@@ -230,6 +273,112 @@ function Interface.new(root: {[any]: any}): Interface
 			activated = true
 			TweenService:Create(self.Holder, tinfo, {Position = UDim2.fromScale(0, 0)}):Play()
 			TweenService:Create(self.Toggle, tinfo, {Rotation = 0}):Play()
+		end
+	end)
+	
+	local warningPopup
+	self.Warning.MouseButton1Down:Connect(function()
+		if warningPopup then
+			--warningPopup:Destroy()
+			--TweenService:Create(self.Toggle, tinfo, {Rotation = 180}):Play()
+		else
+			warningPopup = Create "CanvasGroup" {
+				GroupTransparency = 1,
+				BorderSizePixel = 0,
+				BackgroundColor3 = Color3.fromRGB(47, 47, 47),
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(0.5, 0.5),
+				Size = UDim2.fromScale(0.3, 0.4),
+				ZIndex = 5000,
+				Parent = self.Screen,
+				
+				Children = {
+					Header = Create "TextLabel" {
+						Size = UDim2.fromScale(1, 0.2),
+						Position = UDim2.fromScale(0, 0),
+						ZIndex = 500000,
+
+						BackgroundTransparency = 1,
+						TextTransparency = 0,
+
+						TextScaled = true,
+						TextColor3 = Color3.fromRGB(255, 125, 125),
+						FontFace = Font.fromEnum(Enum.Font.Code),
+						TextXAlignment = Enum.TextXAlignment.Center,
+						TextYAlignment = Enum.TextYAlignment.Top,
+
+						Text = `Outdated`
+					},
+					Description = Create "TextLabel" {
+						Size = UDim2.fromScale(0.8, 0.8),
+						AnchorPoint = Vector2.new(0.5, 0),
+						Position = UDim2.fromScale(0.5, 0.2),
+						ZIndex = 500000,
+
+						BackgroundTransparency = 1,
+						TextTransparency = 0,
+
+						TextScaled = true,
+						TextColor3 = Color3.fromRGB(255, 255, 255),
+						FontFace = Font.fromEnum(Enum.Font.Code),
+						TextXAlignment = Enum.TextXAlignment.Center,
+						TextYAlignment = Enum.TextYAlignment.Top,
+
+						Text = `Your version of Emerald ({Version.getCurrent()}) is outdated. Update to the newest version ({Version.getNewest()}) NOW!!!!!!!!`,
+						
+						Children = {
+							Create "UITextSizeConstraint" {
+								MaxTextSize = 25,
+							}
+						}
+					},
+					Stroke = Create "UIStroke" {
+						Color = Color3.fromRGB(255, 125, 125),
+						Transparency = 1,
+						Thickness = 2,
+						ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+					}
+				}
+			}
+			local button: TextButton = Create "TextButton" {
+				ZIndex = 500000,
+				BorderSizePixel = 0,
+				BackgroundColor3 = Color3.fromRGB(130, 131, 78),
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(0.5, 0.8),
+				Size = UDim2.fromScale(0.7, 0.2),
+				
+				TextScaled = true,
+				TextColor3 = Color3.fromRGB(255, 255, 255),
+				FontFace = Font.fromEnum(Enum.Font.Code),
+				
+				Text = `Understood`,
+				
+				Parent = warningPopup,
+				Children = {
+					TextSize = Create "UITextSizeConstraint" {
+						MaxTextSize = 40,
+					},
+					Stroke = Create "UIStroke" {
+						Color = Color3.fromRGB(255, 255, 255),
+						Thickness = 2,
+						ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+					}
+				}
+			}
+			button.Activated:Once(function()
+				TweenService:Create(warningPopup, tinfo, {GroupTransparency = 1}):Play()
+				TweenService:Create(warningPopup.UIStroke, tinfo, {Transparency = 1}):Play()
+				task.wait(tinfo.Time)
+				warningPopup:Destroy()
+				warningPopup = nil
+			end)
+			TweenService:Create(warningPopup, tinfo, {GroupTransparency = 0}):Play()
+			TweenService:Create(warningPopup.UIStroke, tinfo, {Transparency = 0}):Play()
+			TweenService:Create(self.Warning, tinfo, {Rotation = 360}):Play()
+			task.delay(tinfo.Time, function()
+				self.Warning.Rotation = 0
+			end)
 		end
 	end)
 	

@@ -1,5 +1,6 @@
 local CoreGui = game:GetService("CoreGui")
 
+local Version = require(`../Shared/Version`)
 local Settings = require(`../Shared/Settings`)
 local Create = require(`../UI/Create`)
 local plugin = require(`../Core/Plugin`)()
@@ -32,9 +33,26 @@ function Interface.new(root: {[any]: any}): Interface
 		)
 	)
 	self.Widget.Title = `Emerald Settings`
-	
+
 	self.SelectedCategory = nil
-	
+
+	self.Version = Create "TextLabel" {
+		Size = UDim2.fromScale(1, 1),
+		ZIndex = 999,
+
+		BackgroundTransparency = 1,
+		TextTransparency = 0,
+
+		Text = Version.getCurrent(),
+		TextSize = 18,
+		TextColor3 = Version.isOutdated() and Color3.fromRGB(207, 9, 9) or Color3.fromRGB(108, 108, 108),
+		FontFace = Font.fromEnum(Enum.Font.Code),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextYAlignment = Enum.TextYAlignment.Bottom,
+
+		Parent = self.Widget
+	}
+
 	self.Categories = Create "ScrollingFrame" {
 		Size = UDim2.fromScale(0.25, 1),
 		BorderSizePixel = 0,
