@@ -17,7 +17,7 @@ function Writer.new(root: {[any]: any}): Writer
 	return self
 end
 
-function Writer:Write()
+function Writer.Write(self: Writer)
 	self.Root.Object:SetAttribute(self.Root.Language == `StateScript` and `ScriptSource` or `CustomBehavior`, self.Root.Interface.Input.Text)
 end
 

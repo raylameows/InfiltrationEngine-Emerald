@@ -26,19 +26,42 @@ function Interface.new(root: {[any]: any}): Interface
 			false,
 			false,
 			500,
-			500,
+			400,
 			1,
 			1
 		)
 	)
 	self.Widget.Title = `Emerald Settings`
 	
-	self.Holder = Create "ScrollingFrame" {
-		Size = UDim2.fromScale(1, 1),
+	self.SelectedCategory = nil
+	
+	self.Categories = Create "ScrollingFrame" {
+		Size = UDim2.fromScale(0.25, 1),
 		BorderSizePixel = 0,
 
 		ScrollBarImageColor3 = Color3.fromRGB(53, 55, 65),
 		BackgroundColor3 = Color3.fromRGB(39, 41, 48),
+		MidImage = `rbxassetid://132155326`,
+		BottomImage = `rbxassetid://132155326`,
+		TopImage = `rbxassetid://132155326`,
+		CanvasSize = UDim2.new(0, 0, 0, 0),
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+
+		Parent = self.Widget,
+		Children = {
+			Grid = Create "UIListLayout" {
+				Padding = UDim.new(),
+				SortOrder = Enum.SortOrder.LayoutOrder
+			}
+		}
+	}
+	self.Holder = Create "ScrollingFrame" {
+		Size = UDim2.fromScale(0.75, 1),
+		Position = UDim2.fromScale(0.25, 0),
+		BorderSizePixel = 0,
+
+		ScrollBarImageColor3 = Color3.fromRGB(53, 55, 65),
+		BackgroundColor3 = Color3.fromRGB(25, 26, 31),
 		MidImage = `rbxassetid://132155326`,
 		BottomImage = `rbxassetid://132155326`,
 		TopImage = `rbxassetid://132155326`,
@@ -64,35 +87,144 @@ function Interface.Load(self: Interface)
 	end
 
 	for settingName, setting in (Settings:List()) do
+		if not self.Categories:FindFirstChild(setting.Category[1]) then
+			self:AddCategory(setting.Category[1])
+			if not self.SelectedCategory then
+				self:SelectCategory(setting.Category[1])
+			end
+		end
+		
 		self:AddButton(settingName, setting)
 	end
 end
 
-function Interface.AddButton(self: Interface, settingName: string, setting: {Value: any, Default: any, Display: boolean, Index: number})
+function Interface.SelectCategory(self: Interface, categoryName: string)
+	local previous = self.Categories:FindFirstChild(self.SelectedCategory or ``)
+	local new = self.Categories:FindFirstChild(categoryName)
+	self.SelectedCategory = categoryName
+	
+	if previous then
+		previous.BackgroundTransparency = 1
+	end
+	
+	if new then
+		new.BackgroundTransparency = 0.5
+	end
+
+	for _, frame in (self.Holder:QueryDescendants(`>Frame`)) do
+		frame.Visible = frame:GetAttribute(`Category`) == categoryName
+	end
+end
+
+function Interface.AddCategory(self: Interface, categoryName: string)
+	local index, display = unpack(string.split(categoryName, `-`))
 	local frame = Create "Frame" {
 		BackgroundTransparency = 1,
-		LayoutOrder = setting.Index,
-		Size = UDim2.new(1, 0, 0, 23),
-		
-		Parent = self.Holder,
+		BackgroundColor3 = Color3.fromRGB(0, 85, 255),
+		LayoutOrder = tonumber(index),
+		Size = UDim2.new(1, 0, 0, 32),
+		Name = categoryName,
+
+		Parent = self.Categories,
 		Children = {
 			Display = Create "TextLabel" {
-				Text = setting.Display,
+				Text = display,
 				TextXAlignment = Enum.TextXAlignment.Left,
 				Size = UDim2.fromScale(1, 1),
 				FontFace = Font.fromEnum(Enum.Font.Code),
 				TextScaled = true,
 				BackgroundTransparency = 1,
 				TextColor3 = Color3.new(1, 1, 1),
-				
+
 				Children = {
 					TextSize = Create "UITextSizeConstraint" {
-						MaxTextSize = 20,
+						MaxTextSize = 15,
 					}
 				}
 			},
 		}
 	}
+	local button: TextButton = Create "TextButton" {
+		BackgroundTransparency = 1,
+		Size = UDim2.fromScale(1, 1),
+		Text = ``,
+
+		Parent = frame
+	}
+	
+	button.Activated:Connect(function()
+		self:SelectCategory(categoryName)
+	end)
+	
+	return frame
+end
+
+function Interface.AddButton(self: Interface, settingName: string, setting: {Value: any, Default: any, Display: boolean, Index: number})
+	local maxTextSize = 15
+	local frame = Create "Frame" {
+		BackgroundTransparency = 1,
+		LayoutOrder = setting.Index,
+		Size = UDim2.new(1, 0, 0, 18),
+		
+		Parent = self.Holder,
+		Children = {
+			Display = Create "TextLabel" {
+				Text = setting.Display,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				Size = UDim2.new(1, -5, 1, 0),
+				FontFace = Font.fromEnum(Enum.Font.Code),
+				TextScaled = true,
+				BackgroundTransparency = 1,
+				Position = UDim2.fromOffset(5, 0),
+				TextColor3 = Color3.new(1, 1, 1),
+				
+				Children = {
+					TextSize = Create "UITextSizeConstraint" {
+						MaxTextSize = maxTextSize,
+					}
+				}
+			},
+		}
+	}
+	frame:SetAttribute(`Category`, setting.Category[1])
+	frame.Visible = frame:GetAttribute(`Category`) == self.SelectedCategory
+	
+	local subCategory = setting.Category[2]
+	local subCategoryExists = self.Holder:FindFirstChild(subCategory)
+	if not subCategoryExists then
+		local index, display = unpack(string.split(subCategory, `-`))
+		local divider = Create "Frame" {
+			BackgroundTransparency = 0,
+			BorderSizePixel = 0,
+			BackgroundColor3 = Color3.fromRGB(32, 34, 39),
+			LayoutOrder = tonumber(`{index}0000`),
+			Size = UDim2.new(1, 0, 0, 24),
+			Name = subCategory,
+
+			Parent = self.Holder,
+			Children = {
+				Display = Create "TextLabel" {
+					Text = display,
+					TextXAlignment = Enum.TextXAlignment.Left,
+					Size = UDim2.new(1, -5, 1, 0),
+					FontFace = Font.fromEnum(Enum.Font.Code),
+					TextScaled = true,
+					BackgroundTransparency = 1,
+					Position = UDim2.fromOffset(5, 0),
+					TextColor3 = Color3.new(1, 1, 1),
+
+					Children = {
+						TextSize = Create "UITextSizeConstraint" {
+							MaxTextSize = maxTextSize + 5,
+						}
+					}
+				},
+			}
+		}
+		divider:SetAttribute(`Category`, setting.Category[1])
+		divider.Visible = divider:GetAttribute(`Category`) == self.SelectedCategory
+	end
+	
 	local reset = Create "TextButton" {
 		Text = `R`,
 		TextXAlignment = Enum.TextXAlignment.Center,
@@ -107,7 +239,7 @@ function Interface.AddButton(self: Interface, settingName: string, setting: {Val
 		Parent = frame,
 		Children = {
 			TextSize = Create "UITextSizeConstraint" {
-				MaxTextSize = 20,
+				MaxTextSize = maxTextSize,
 			}
 		}
 	}
@@ -129,7 +261,7 @@ function Interface.AddButton(self: Interface, settingName: string, setting: {Val
 			Parent = frame,
 			Children = {
 				TextSize = Create "UITextSizeConstraint" {
-					MaxTextSize = 20,
+					MaxTextSize = maxTextSize,
 				}
 			}
 		}
@@ -164,7 +296,7 @@ function Interface.AddButton(self: Interface, settingName: string, setting: {Val
 			Parent = frame,
 			Children = {
 				TextSize = Create "UITextSizeConstraint" {
-					MaxTextSize = 20,
+					MaxTextSize = maxTextSize,
 				},
 			}
 		}

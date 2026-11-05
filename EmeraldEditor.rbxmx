@@ -884,59 +884,6 @@ return Interface]]></ProtectedString>
 					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBXE1EAC74966624A0AB5A28F52D521A3EC">
-				<Properties>
-					<Content name="LinkedSource"><null></null></Content>
-					<ProtectedString name="Source"><![CDATA[-- // hi
-
-local Tokenizer = require(`../Language/Tokenizer`)
-local Formatter = require(`../Language/Formatter`)
-
-local Renderer = {}
-Renderer.__index = Renderer
-
-type self = {
-
-}
-type Renderer = setmetatable<self, typeof(Renderer)>
-
-function Renderer.new(root: {[any]: any}): Renderer
-	local self = setmetatable({} :: self, Renderer)
-	self.Root = root
-	
-	root.Maid:Add(self.Root.Interface.Input:GetPropertyChangedSignal(`Text`):Connect(function()
-		self:Render()
-	end))
-	self:Render()
-
-	return self
-end
-
-function Renderer.Render(self: Renderer)
-	self.Root.Interface:UpdateCanvas()
-	
-	local tokens = Tokenizer:FromSource(self.Root.Language, self.Root.Interface.Input.Text)
-	self.Root.State.Tokens = tokens
-	self.Root.Interface.Text.Text = Formatter(self.Root.Language, tokens)
-	self.Root.Interface.LinesDisplay.Text = ``
-	for index, line in (string.split(self.Root.Interface.Input.Text, `\n`)) do
-		self.Root.Interface.LinesDisplay.Text ..= index.. `\n`
-	end
-
-	self.Root.Suggestions:Update()
-end
-
-return Renderer]]></ProtectedString>
-					<string name="ScriptGuid">{5a618d14-9980-961e-d591-e5039f27c5f5}</string>
-					<BinaryString name="AttributesSerialize"></BinaryString>
-					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
-					<bool name="DefinesCapabilities">false</bool>
-					<string name="Name">Renderer</string>
-					<BinaryString name="SerializedOverrides"></BinaryString>
-					<int64 name="SourceAssetId">-1</int64>
-					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
-				</Properties>
-			</Item>
 			<Item class="ModuleScript" referent="RBXF4E5A17247D2499F867B9C8F66BDFB34">
 				<Properties>
 					<Content name="LinkedSource"><null></null></Content>
@@ -1053,7 +1000,7 @@ function Writer.new(root: {[any]: any}): Writer
 	return self
 end
 
-function Writer:Write()
+function Writer.Write(self: Writer)
 	self.Root.Object:SetAttribute(self.Root.Language == `StateScript` and `ScriptSource` or `CustomBehavior`, self.Root.Interface.Input.Text)
 end
 
@@ -1063,6 +1010,299 @@ return Writer]]></ProtectedString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
 					<string name="Name">Writer</string>
+					<BinaryString name="SerializedOverrides"></BinaryString>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+			</Item>
+			<Item class="Folder" referent="RBXE18D17884E06491D8ADE54220D006DD9">
+				<Properties>
+					<Color3 name="IconTint">
+						<R>0</R>
+						<G>0</G>
+						<B>0</B>
+					</Color3>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">RendererModules</string>
+					<BinaryString name="SerializedOverrides"></BinaryString>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+				<Item class="ModuleScript" referent="RBX13DD1B2119044FE6B50CD9A6A9B0D385">
+					<Properties>
+						<Content name="LinkedSource"><null></null></Content>
+						<ProtectedString name="Source"><![CDATA[-- // hi
+
+local Tokenizer = require(`../../Language/Tokenizer`)
+local Formatter = require(`../../Language/Formatter`)
+
+local Renderer = {}
+Renderer.__index = Renderer
+
+type self = {
+
+}
+type Renderer = setmetatable<self, typeof(Renderer)>
+
+function Renderer.new(root: {[any]: any}): Renderer
+	local self = setmetatable({} :: self, Renderer)
+	self.Root = root
+	
+	root.Maid:Add(self.Root.Interface.Input:GetPropertyChangedSignal(`Text`):Connect(function()
+		self:Render()
+	end))
+	self:Render()
+
+	return self
+end
+
+function Renderer.Render(self: Renderer)
+	self.Root.Interface:UpdateCanvas()
+	
+	local tokens = Tokenizer:FromSource(self.Root.Language, self.Root.Interface.Input.Text)
+	self.Root.State.Tokens = tokens
+	self.Root.Interface.Text.Text = Formatter(self.Root.Language, tokens)
+	self.Root.Interface.LinesDisplay.Text = ``
+	for index, line in (string.split(self.Root.Interface.Input.Text, `\n`)) do
+		self.Root.Interface.LinesDisplay.Text ..= index.. `\n`
+	end
+
+	self.Root.Suggestions:Update()
+end
+
+return Renderer]]></ProtectedString>
+						<string name="ScriptGuid">{48ab31ff-b1bc-4ea1-5740-3b5de87e1e21}</string>
+						<BinaryString name="AttributesSerialize"></BinaryString>
+						<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+						<bool name="DefinesCapabilities">false</bool>
+						<string name="Name">FullSource</string>
+						<BinaryString name="SerializedOverrides"></BinaryString>
+						<int64 name="SourceAssetId">-1</int64>
+						<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBXE1EAC74966624A0AB5A28F52D521A3EC">
+					<Properties>
+						<Content name="LinkedSource"><null></null></Content>
+						<ProtectedString name="Source"><![CDATA[local Tokenizer = require(`../../Language/Tokenizer`)
+local Formatter = require(`../../Language/Formatter`)
+local utf8lib = require(`../../Util/utf8lib`)
+
+local Renderer = {}
+Renderer.__index = Renderer
+
+type self = {
+	Root: {[any]: any},
+	Initialized: boolean,
+
+	Lines: {string},
+	FormattedLines: {string},
+	TokensByLine: {{any}},
+}
+type Renderer = setmetatable<self, typeof(Renderer)>
+
+function Renderer.new(root: {[any]: any}): Renderer
+	local self = setmetatable({} :: self, Renderer)
+
+	self.Root = root
+	self.Initialized = false
+
+	self.Lines = {}
+	self.FormattedLines = {}
+	self.TokensByLine = {}
+
+	root.Maid:Add(self.Root.Interface.Input:GetPropertyChangedSignal(`Text`):Connect(function()
+		self:Render()
+	end))
+
+	self:Render()
+
+	return self
+end
+
+function Renderer.IsSameLine(self: Renderer, oldIndex: number, newIndex: number, oldLines: {string}, newLines: {string}): boolean
+	local oldLine = oldLines[oldIndex]
+	local newLine = newLines[newIndex]
+	if oldLine ~= newLine then return false end
+
+	local oldHasNewline = oldIndex < #oldLines
+	local newHasNewline = newIndex < #newLines
+	return oldHasNewline == newHasNewline
+end
+
+function Renderer.TokenizeLine(self: Renderer, lineNumber: number, lines: {string}): ({any}, string)
+	local line = lines[lineNumber] or ``
+	if lineNumber < #lines then
+		line ..= `\n`
+	end
+
+	local tokens = Tokenizer:FromSource(self.Root.Language, line)
+	local formatted = Formatter(self.Root.Language, tokens)
+	return tokens, formatted
+end
+
+function Renderer.UpdateLines(self: Renderer, lines: {string})
+	local oldLines = self.Lines
+	local oldTokens = self.TokensByLine
+	local oldFormatted = self.FormattedLines
+
+	local oldCount = #oldLines
+	local newCount = #lines
+
+	local prefix = 0
+	while prefix < math.min(oldCount, newCount) do
+		local index = prefix + 1
+		if not self:IsSameLine(index, index, oldLines, lines) then break end
+		prefix += 1
+	end
+
+	local oldEnd = oldCount
+	local newEnd = newCount
+	while oldEnd > prefix and newEnd > prefix do
+		if not self:IsSameLine(oldEnd, newEnd, oldLines, lines) then break end
+		oldEnd -= 1
+		newEnd -= 1
+	end
+
+	local tokensByLine = {}
+	local formattedLines = {}
+	for index = 1, prefix do
+		tokensByLine[index] = oldTokens[index]
+		formattedLines[index] = oldFormatted[index]
+	end
+
+	for index = prefix + 1, newEnd do
+		local tokens, formatted = self:TokenizeLine(index, lines)
+		tokensByLine[index] = tokens
+		formattedLines[index] = formatted
+	end
+
+	local suffixCount = oldCount - oldEnd
+	for offset = 1, suffixCount do
+		local oldIndex = oldEnd + offset
+		local newIndex = newEnd + offset
+		tokensByLine[newIndex] = oldTokens[oldIndex]
+		formattedLines[newIndex] = oldFormatted[oldIndex]
+	end
+
+	self.Lines = lines
+	self.TokensByLine = tokensByLine
+	self.FormattedLines = formattedLines
+end
+
+function Renderer.GetLineStart(self: Renderer, lineNumber: number): number
+	local position = 1
+	
+	for index = 1, lineNumber - 1 do
+		position += utf8lib.len(self.Lines[index]) + 1
+	end
+
+	return position
+end
+
+function Renderer.RebuildTokens(self: Renderer)
+	local tokens = {}
+
+	for lineNumber = 1, #self.Lines do
+		local lineTokens = self.TokensByLine[lineNumber]
+		local lineStart = self:GetLineStart(lineNumber)
+		for _, originalToken in (lineTokens) do
+			local token = table.clone(originalToken)
+			token.Start += lineStart - 1
+			token.End += lineStart - 1
+			table.insert(tokens, token)
+		end
+	end
+
+	self.Root.State.Tokens = tokens
+end
+
+function Renderer.RebuildFormattedText(self: Renderer)
+	self.Root.Interface.Text.Text = table.concat(self.FormattedLines, ``)
+end
+
+function Renderer.RebuildLineNumbers(self: Renderer)
+	self.Root.Interface.LinesDisplay.Text = ``
+
+	for index in (self.Lines) do
+		self.Root.Interface.LinesDisplay.Text ..= index.. `\n`
+	end
+end
+
+function Renderer.Render(self: Renderer)
+	self.Root.Interface:UpdateCanvas()
+
+	local text = self.Root.Interface.Input.Text
+	local lines = string.split(text, `\n`)
+
+	if not self.Initialized then
+		self.Lines = {}
+		self.TokensByLine = {}
+		self.FormattedLines = {}
+
+		for index = 1, #lines do
+			local tokens, formatted = self:TokenizeLine(index, lines)
+			self.TokensByLine[index] = tokens
+			self.FormattedLines[index] = formatted
+		end
+
+		self.Lines = lines
+		self.Initialized = true
+	else
+		self:UpdateLines(lines)
+	end
+
+	self:RebuildTokens()
+	self:RebuildFormattedText()
+	self:RebuildLineNumbers()
+	self.Root.Suggestions:Update()
+end
+
+return Renderer]]></ProtectedString>
+						<string name="ScriptGuid">{27481924-ca9e-016e-bae8-8cc96b86c18f}</string>
+						<BinaryString name="AttributesSerialize"></BinaryString>
+						<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+						<bool name="DefinesCapabilities">false</bool>
+						<string name="Name">PerLine</string>
+						<BinaryString name="SerializedOverrides"></BinaryString>
+						<int64 name="SourceAssetId">-1</int64>
+						<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+					</Properties>
+				</Item>
+			</Item>
+			<Item class="ModuleScript" referent="RBXC7B0F043214F48D086E21078C5CC477A">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[local FullSource = require(`./RendererModules/FullSource`)
+local PerLine = require(`./RendererModules/PerLine`)
+local Settings = require(`../Shared/Settings`)
+local DebugPrint = require(`../Shared/DebugPrint`)
+
+local RendererWrapper = {}
+RendererWrapper.__index = RendererWrapper
+
+type self = {[any]: any?}
+type RendererWrapper = setmetatable<self, typeof(RendererWrapper)>
+
+-- When & if deemed stable enough, switch fully to per-line
+function RendererWrapper.new(root: {[any]: any}): RendererWrapper
+	local useFullSource = Settings:Get(`UseFullSourceRendering`) == true
+	DebugPrint(`Using {useFullSource and `Full Source` or `Per Line`} rendering`)
+	
+	local start = os.clock()
+	local renderer = useFullSource and FullSource.new(root) or PerLine.new(root)
+	DebugPrint(`Rendering took {os.clock() - start}s`)
+	return renderer
+end
+
+return RendererWrapper]]></ProtectedString>
+					<string name="ScriptGuid">{5a618d14-9980-961e-d591-e5039f27c5f5}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">Renderer</string>
 					<BinaryString name="SerializedOverrides"></BinaryString>
 					<int64 name="SourceAssetId">-1</int64>
 					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
@@ -1778,19 +2018,42 @@ function Interface.new(root: {[any]: any}): Interface
 			false,
 			false,
 			500,
-			500,
+			400,
 			1,
 			1
 		)
 	)
 	self.Widget.Title = `Emerald Settings`
 	
-	self.Holder = Create "ScrollingFrame" {
-		Size = UDim2.fromScale(1, 1),
+	self.SelectedCategory = nil
+	
+	self.Categories = Create "ScrollingFrame" {
+		Size = UDim2.fromScale(0.25, 1),
 		BorderSizePixel = 0,
 
 		ScrollBarImageColor3 = Color3.fromRGB(53, 55, 65),
 		BackgroundColor3 = Color3.fromRGB(39, 41, 48),
+		MidImage = `rbxassetid://132155326`,
+		BottomImage = `rbxassetid://132155326`,
+		TopImage = `rbxassetid://132155326`,
+		CanvasSize = UDim2.new(0, 0, 0, 0),
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+
+		Parent = self.Widget,
+		Children = {
+			Grid = Create "UIListLayout" {
+				Padding = UDim.new(),
+				SortOrder = Enum.SortOrder.LayoutOrder
+			}
+		}
+	}
+	self.Holder = Create "ScrollingFrame" {
+		Size = UDim2.fromScale(0.75, 1),
+		Position = UDim2.fromScale(0.25, 0),
+		BorderSizePixel = 0,
+
+		ScrollBarImageColor3 = Color3.fromRGB(53, 55, 65),
+		BackgroundColor3 = Color3.fromRGB(25, 26, 31),
 		MidImage = `rbxassetid://132155326`,
 		BottomImage = `rbxassetid://132155326`,
 		TopImage = `rbxassetid://132155326`,
@@ -1816,35 +2079,144 @@ function Interface.Load(self: Interface)
 	end
 
 	for settingName, setting in (Settings:List()) do
+		if not self.Categories:FindFirstChild(setting.Category[1]) then
+			self:AddCategory(setting.Category[1])
+			if not self.SelectedCategory then
+				self:SelectCategory(setting.Category[1])
+			end
+		end
+		
 		self:AddButton(settingName, setting)
 	end
 end
 
-function Interface.AddButton(self: Interface, settingName: string, setting: {Value: any, Default: any, Display: boolean, Index: number})
+function Interface.SelectCategory(self: Interface, categoryName: string)
+	local previous = self.Categories:FindFirstChild(self.SelectedCategory or ``)
+	local new = self.Categories:FindFirstChild(categoryName)
+	self.SelectedCategory = categoryName
+	
+	if previous then
+		previous.BackgroundTransparency = 1
+	end
+	
+	if new then
+		new.BackgroundTransparency = 0.5
+	end
+
+	for _, frame in (self.Holder:QueryDescendants(`>Frame`)) do
+		frame.Visible = frame:GetAttribute(`Category`) == categoryName
+	end
+end
+
+function Interface.AddCategory(self: Interface, categoryName: string)
+	local index, display = unpack(string.split(categoryName, `-`))
 	local frame = Create "Frame" {
 		BackgroundTransparency = 1,
-		LayoutOrder = setting.Index,
-		Size = UDim2.new(1, 0, 0, 23),
-		
-		Parent = self.Holder,
+		BackgroundColor3 = Color3.fromRGB(0, 85, 255),
+		LayoutOrder = tonumber(index),
+		Size = UDim2.new(1, 0, 0, 32),
+		Name = categoryName,
+
+		Parent = self.Categories,
 		Children = {
 			Display = Create "TextLabel" {
-				Text = setting.Display,
+				Text = display,
 				TextXAlignment = Enum.TextXAlignment.Left,
 				Size = UDim2.fromScale(1, 1),
 				FontFace = Font.fromEnum(Enum.Font.Code),
 				TextScaled = true,
 				BackgroundTransparency = 1,
 				TextColor3 = Color3.new(1, 1, 1),
-				
+
 				Children = {
 					TextSize = Create "UITextSizeConstraint" {
-						MaxTextSize = 20,
+						MaxTextSize = 15,
 					}
 				}
 			},
 		}
 	}
+	local button: TextButton = Create "TextButton" {
+		BackgroundTransparency = 1,
+		Size = UDim2.fromScale(1, 1),
+		Text = ``,
+
+		Parent = frame
+	}
+	
+	button.Activated:Connect(function()
+		self:SelectCategory(categoryName)
+	end)
+	
+	return frame
+end
+
+function Interface.AddButton(self: Interface, settingName: string, setting: {Value: any, Default: any, Display: boolean, Index: number})
+	local maxTextSize = 15
+	local frame = Create "Frame" {
+		BackgroundTransparency = 1,
+		LayoutOrder = setting.Index,
+		Size = UDim2.new(1, 0, 0, 18),
+		
+		Parent = self.Holder,
+		Children = {
+			Display = Create "TextLabel" {
+				Text = setting.Display,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				Size = UDim2.new(1, -5, 1, 0),
+				FontFace = Font.fromEnum(Enum.Font.Code),
+				TextScaled = true,
+				BackgroundTransparency = 1,
+				Position = UDim2.fromOffset(5, 0),
+				TextColor3 = Color3.new(1, 1, 1),
+				
+				Children = {
+					TextSize = Create "UITextSizeConstraint" {
+						MaxTextSize = maxTextSize,
+					}
+				}
+			},
+		}
+	}
+	frame:SetAttribute(`Category`, setting.Category[1])
+	frame.Visible = frame:GetAttribute(`Category`) == self.SelectedCategory
+	
+	local subCategory = setting.Category[2]
+	local subCategoryExists = self.Holder:FindFirstChild(subCategory)
+	if not subCategoryExists then
+		local index, display = unpack(string.split(subCategory, `-`))
+		local divider = Create "Frame" {
+			BackgroundTransparency = 0,
+			BorderSizePixel = 0,
+			BackgroundColor3 = Color3.fromRGB(32, 34, 39),
+			LayoutOrder = tonumber(`{index}0000`),
+			Size = UDim2.new(1, 0, 0, 24),
+			Name = subCategory,
+
+			Parent = self.Holder,
+			Children = {
+				Display = Create "TextLabel" {
+					Text = display,
+					TextXAlignment = Enum.TextXAlignment.Left,
+					Size = UDim2.new(1, -5, 1, 0),
+					FontFace = Font.fromEnum(Enum.Font.Code),
+					TextScaled = true,
+					BackgroundTransparency = 1,
+					Position = UDim2.fromOffset(5, 0),
+					TextColor3 = Color3.new(1, 1, 1),
+
+					Children = {
+						TextSize = Create "UITextSizeConstraint" {
+							MaxTextSize = maxTextSize + 5,
+						}
+					}
+				},
+			}
+		}
+		divider:SetAttribute(`Category`, setting.Category[1])
+		divider.Visible = divider:GetAttribute(`Category`) == self.SelectedCategory
+	end
+	
 	local reset = Create "TextButton" {
 		Text = `R`,
 		TextXAlignment = Enum.TextXAlignment.Center,
@@ -1859,7 +2231,7 @@ function Interface.AddButton(self: Interface, settingName: string, setting: {Val
 		Parent = frame,
 		Children = {
 			TextSize = Create "UITextSizeConstraint" {
-				MaxTextSize = 20,
+				MaxTextSize = maxTextSize,
 			}
 		}
 	}
@@ -1881,7 +2253,7 @@ function Interface.AddButton(self: Interface, settingName: string, setting: {Val
 			Parent = frame,
 			Children = {
 				TextSize = Create "UITextSizeConstraint" {
-					MaxTextSize = 20,
+					MaxTextSize = maxTextSize,
 				}
 			}
 		}
@@ -1916,7 +2288,7 @@ function Interface.AddButton(self: Interface, settingName: string, setting: {Val
 			Parent = frame,
 			Children = {
 				TextSize = Create "UITextSizeConstraint" {
-					MaxTextSize = 20,
+					MaxTextSize = maxTextSize,
 				},
 			}
 		}
@@ -2058,109 +2430,143 @@ local Functions = {}
 local function GetIndex(category: number, order: number)
 	return tonumber(`{category}000{order}`)
 end
-local Settings = setmetatable({
-	CaretWidth = {
-		Index = GetIndex(1, 1),
-		Display = `Caret Width`,
-		Default = 1,
-	},
-	CaretBlinking = {
-		Index = GetIndex(1, 2),
-		Display = `Caret Blinking`,
-		Default = true,
-	},
-	CaretBlinkSpeed = {
-		Index = GetIndex(1, 3),
-		Display = `Caret Blink Interval`,
-		Default = 0.5,
-	},
-	AnimatedCaret = {
-		Index = GetIndex(1, 4),
-		Display = `Caret Animation`,
-		Default = false,
-	},
-	AnimatedCaretTime = {
-		Index = GetIndex(1, 5),
-		Display = `Caret Animation Interval`,
-		Default = 0.05,
-	},
-	AnimatedLineHighlight = {
-		Index = GetIndex(1, 6),
-		Display = `Line Highight Animation`,
-		Default = false,
-	},
-	AnimatedLineHighlightTime = {
-		Index = GetIndex(1, 7),
-		Display = `Line Highlight Animation Interval`,
-		Default = 0.05,
+local Categories = {
+	[`1-Appearance`] = {
+		[`1-Selection`] = {
+			CaretWidth = {
+				Index = GetIndex(1, 1),
+				Display = `Caret Width`,
+				Default = 1,
+			},
+			CaretBlinking = {
+				Index = GetIndex(1, 2),
+				Display = `Caret Blinking`,
+				Default = true,
+			},
+			CaretBlinkSpeed = {
+				Index = GetIndex(1, 3),
+				Display = `Caret Blink Interval`,
+				Default = 0.5,
+			},
+			AnimatedCaret = {
+				Index = GetIndex(1, 4),
+				Display = `Caret Animation`,
+				Default = false,
+			},
+			AnimatedCaretTime = {
+				Index = GetIndex(1, 5),
+				Display = `Caret Animation Interval`,
+				Default = 0.05,
+			},
+			AnimatedLineHighlight = {
+				Index = GetIndex(1, 6),
+				Display = `Line Highight Animation`,
+				Default = false,
+			},
+			AnimatedLineHighlightTime = {
+				Index = GetIndex(1, 7),
+				Display = `Line Highlight Animation Interval`,
+				Default = 0.05,
+			},
+		},
+		
+		[`2-Syntax`] = {
+			CommandColor = {
+				Index = GetIndex(2, 1),
+				Display = `Command Color`,
+				Default = Color3.fromRGB(85, 170, 255),
+			},
+			LabelColor = {
+				Index = GetIndex(2, 2),
+				Display = `Label Color`,
+				Default = Color3.fromRGB(255, 170, 255),
+			},
+			PrivateColor = {
+				Index = GetIndex(2, 3),
+				Display = `Private Color`,
+				Default = Color3.fromRGB(229, 192, 123),
+			},
+			PreprocessorColor = {
+				Index = GetIndex(2, 4),
+				Display = `Preprocessor Color`,
+				Default = Color3.fromRGB(255, 85, 0),
+			},
+			StringColor = {
+				Index = GetIndex(2, 6),
+				Display = `String Color`,
+				Default = Color3.fromRGB(0, 204, 150),
+			},
+			ExprColor = {
+				Index = GetIndex(2, 7),
+				Display = `Expr Color`,
+				Default = Color3.fromRGB(173, 241, 132),
+			},
+			NumberColor = {
+				Index = GetIndex(2, 8),
+				Display = `Number Color`,
+				Default = Color3.fromRGB(255, 198, 0),
+			},
+			BackgroundColor = {
+				Index = GetIndex(2, 9),
+				Display = `Background Color`,
+				Default = Color3.fromRGB(37, 37, 37)
+			},
+			LineHighlightColor = {
+				Index = GetIndex(2, 10),
+				Display = `Line Highlight Color`,
+				Default = Color3.fromRGB(45, 50, 65)
+			},
+			CommentColor = {
+				Index = GetIndex(2, 11),
+				Display = `Comment Color`,
+				Default = Color3.fromRGB(104, 104, 104)
+			},
+			ExtensionCommandColor = {
+				Index = GetIndex(2, 12),
+				Display = `Extension Command Color`,
+				Default = Color3.fromRGB(76, 207, 255)
+			},
+			ExpressionColor = {
+				Index = GetIndex(2, 13),
+				Display = `Expression Color`,
+				Default = Color3.fromRGB(248, 109, 124)
+			},
+			TextColor = {
+				Index = GetIndex(2, 14),
+				Display = `Text Color`,
+				Default = Color3.fromRGB(204, 204, 204)
+			}
+		}
 	},
 	
-	CommandColor = {
-		Index = GetIndex(2, 1),
-		Display = `Command Color`,
-		Default = Color3.fromRGB(85, 170, 255),
-	},
-	LabelColor = {
-		Index = GetIndex(2, 2),
-		Display = `Label Color`,
-		Default = Color3.fromRGB(255, 170, 255),
-	},
-	PrivateColor = {
-		Index = GetIndex(2, 3),
-		Display = `Private Color`,
-		Default = Color3.fromRGB(229, 192, 123),
-	},
-	PreprocessorColor = {
-		Index = GetIndex(2, 4),
-		Display = `Preprocessor Color`,
-		Default = Color3.fromRGB(255, 85, 0),
-	},
-	StringColor = {
-		Index = GetIndex(2, 6),
-		Display = `String Color`,
-		Default = Color3.fromRGB(0, 204, 150),
-	},
-	ExprColor = {
-		Index = GetIndex(2, 7),
-		Display = `Expr Color`,
-		Default = Color3.fromRGB(173, 241, 132),
-	},
-	NumberColor = {
-		Index = GetIndex(2, 8),
-		Display = `Number Color`,
-		Default = Color3.fromRGB(255, 198, 0),
-	},
-	BackgroundColor = {
-		Index = GetIndex(2, 9),
-		Display = `Background Color`,
-		Default = Color3.fromRGB(37, 37, 37)
-	},
-	LineHighlightColor = {
-		Index = GetIndex(2, 10),
-		Display = `Line Highlight Color`,
-		Default = Color3.fromRGB(45, 50, 65)
-	},
-	CommentColor = {
-		Index = GetIndex(2, 11),
-		Display = `Comment Color`,
-		Default = Color3.fromRGB(104, 104, 104)
-	},
-	ExtensionCommandColor = {
-		Index = GetIndex(2, 12),
-		Display = `Extension Command Color`,
-		Default = Color3.fromRGB(76, 207, 255)
-	},
-	ExpressionColor = {
-		Index = GetIndex(2, 13),
-		Display = `Expression Color`,
-		Default = Color3.fromRGB(248, 109, 124)
-	},
-	TextColor = {
-		Index = GetIndex(2, 14),
-		Display = `Text Color`,
-		Default = Color3.fromRGB(204, 204, 204)
-	},
-}, {__index = Functions})
+	[`1-Behavior`] = {
+		[`1-Rendering`] = {
+			UseFullSourceRendering = {
+				Index = GetIndex(1, 1),
+				Display = `Render Full Source`,
+				Default = false,
+			},
+		},
+		
+		[`2-Developer`] = {
+			DebugMessages = {
+				Index = GetIndex(2, 1),
+				Display = `Debug Messages`,
+				Default = false,
+			}
+		}
+	}
+}
+local Flattened = {}
+for categoryName, category in (Categories) do
+	for subCategoryName, subCategory in (category) do
+		for settingName, setting in (subCategory) do
+			setting.Category = {categoryName, subCategoryName}
+			Flattened[settingName] = setting
+		end
+	end
+end
+local Settings = setmetatable(Flattened, {__index = Functions})
 
 local Encoder = require(`../Settings/Encoder`)
 local Decoder = require(`../Settings/Decoder`)
@@ -2204,6 +2610,25 @@ return Settings]]></ProtectedString>
 					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
 					<string name="Name">Settings</string>
+					<BinaryString name="SerializedOverrides"></BinaryString>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX6380FD55ABDB42C89A8C85CBC1807737">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[local Settings = require(`./Settings`)
+
+return function(message: string)
+	if not Settings:Get(`DebugMessages`) then return end
+	print(`Emerald :: {message}`)
+end]]></ProtectedString>
+					<string name="ScriptGuid">{4911b277-962b-1be0-d6b9-9b362a850e7b}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">DebugPrint</string>
 					<BinaryString name="SerializedOverrides"></BinaryString>
 					<int64 name="SourceAssetId">-1</int64>
 					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
